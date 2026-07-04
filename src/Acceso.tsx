@@ -6,6 +6,7 @@ import { autenticar, cambiarPassword, registrarIngreso } from './data/usuarios'
 import { leerSesion, guardarSesion, cerrarSesion } from './lib/sesion'
 import type { Sesion } from './lib/sesion'
 import { AccesoContexto } from './lib/accesoCtx'
+import { usePersistencia } from './lib/persistencia'
 
 // ─── Acceso (V3): login por usuario + roles ───────────────────────────────────
 // Reemplaza al gate de contraseña compartida. Cada usuario entra con su correo;
@@ -40,16 +41,8 @@ export default function Acceso({ children }: { children: ReactNode }) {
     return () => { alive = false }
   }, [])
 
-  // guardado: local inmediato + remoto con debounce
-  useEffect(() => {
-    if (!ready) return
-    saveLocalAdmin(admin)
-    const t = window.setTimeout(() => {
-      setAdminStatus('Guardando…')
-      saveRemoteAdmin(admin).then((r) => setAdminStatus(r.ok ? 'Sincronizado' : 'Sin conexión · local'))
-    }, 700)
-    return () => clearTimeout(t)
-  }, [admin, ready])
+  // guardado con debounce + flush al desmontar + no reescribir el estado hidratado
+  usePersistencia(admin, ready, saveLocalAdmin, saveRemoteAdmin, setAdminStatus)
 
   const usuario = sesion ? admin.usuarios.find((u) => u.id === sesion.usuarioId) : null
   const salir = () => { cerrarSesion(); setSesion(null); setPw(''); setErr('') }

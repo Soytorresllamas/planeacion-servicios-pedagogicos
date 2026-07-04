@@ -52,8 +52,24 @@ export function genTempPassword(rand: () => number = Math.random): string {
   return `SM-${s}`;
 }
 
-const nuevoId = (correo: string): string =>
+const slugId = (correo: string): string =>
   'usr-' + correo.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/** id derivado del correo, garantizando que no choque con otro ya existente
+ *  (dos correos distintos pueden normalizar al mismo slug: a.b@x vs a-b@x). */
+const idUnico = (correo: string, usuarios: Usuario[]): string => {
+  const base = slugId(correo);
+  if (!usuarios.some((u) => u.id === base)) return base;
+  let n = 2, id = `${base}-${n}`;
+  while (usuarios.some((u) => u.id === id)) { n++; id = `${base}-${n}`; }
+  return id;
+};
+
+/** ¿`id` es el ÚNICO administrador activo? Sirve para impedir lockouts. */
+export function esUnicoAdminActivo(usuarios: Usuario[], id: string): boolean {
+  const admins = usuarios.filter((u) => u.rol === 'admin' && u.activo);
+  return admins.length === 1 && admins[0].id === id;
+}
 
 // ── usuarios ──
 export interface NuevoUsuario {
@@ -73,7 +89,7 @@ export async function crearUsuario(data: AdminData, n: NuevoUsuario, rand?: () =
   if (data.usuarios.some((u) => u.correo === correo)) return { ok: false, error: 'Ya existe un usuario con ese correo.' };
   const tempPassword = genTempPassword(rand);
   const usuario: Usuario = {
-    id: nuevoId(correo),
+    id: idUnico(correo, data.usuarios),
     nombre: n.nombre.trim(), apellido: n.apellido.trim(), correo,
     fechaIngreso: n.fechaIngreso, rol: n.rol, asesorId: n.asesorId,
     passHash: await sha256(tempPassword), tempPassword: true,

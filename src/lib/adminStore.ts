@@ -1,7 +1,7 @@
 // Persistencia del tablero de administración (usuarios, gerencias, ejecutivos):
 // local versionado + Supabase (tabla psp_admin) con degradación a local.
 // Mismo patrón que planeacionStore.
-import { supabase } from './supabase';
+import { supabase, PROJECT_REF } from './supabase';
 import { defaultAdminData } from '../data/usuarios';
 import type { AdminData } from '../data/usuarios';
 
@@ -20,14 +20,15 @@ export const loadLocalAdmin = (): AdminData | null => {
   try {
     const raw = localStorage.getItem(LS_ADMIN);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { v?: number; data?: unknown };
-    if (parsed && parsed.v === SCHEMA_V && valid(parsed.data)) return parsed.data;
+    const parsed = JSON.parse(raw) as { v?: number; backend?: string; data?: unknown };
+    // Descarta caché de otra versión o de otro backend (evita mezclar usuarios).
+    if (parsed && parsed.v === SCHEMA_V && parsed.backend === PROJECT_REF && valid(parsed.data)) return parsed.data;
   } catch { /* noop */ }
   return null;
 };
 
 export const saveLocalAdmin = (data: AdminData): void => {
-  try { localStorage.setItem(LS_ADMIN, JSON.stringify({ v: SCHEMA_V, data })); } catch { /* noop */ }
+  try { localStorage.setItem(LS_ADMIN, JSON.stringify({ v: SCHEMA_V, backend: PROJECT_REF, data })); } catch { /* noop */ }
 };
 
 export type LoadAdminResult =

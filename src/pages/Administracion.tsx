@@ -5,13 +5,14 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useAcceso } from '../lib/accesoCtx'
 import {
-  crearUsuario, resetPassword, patchUsuario, usoResumen, ROLES,
+  crearUsuario, resetPassword, patchUsuario, usoResumen, esUnicoAdminActivo, ROLES,
   agregarCatalogo, quitarCatalogo, renombrarCatalogo,
 } from '../data/usuarios'
 import type { Rol, Usuario } from '../data/usuarios'
 import { defaultPlaneacion, importarColegios, patchColegio, hoyISO } from '../data/planeacion'
 import type { PlaneacionData } from '../data/planeacion'
 import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
+import { usePersistencia } from '../lib/persistencia'
 import { leerArchivo, mapearFilas } from '../lib/importColegios'
 import { Seg } from '../ui/Seg'
 import { NumberTicker } from '../ui/NumberTicker'
@@ -28,7 +29,7 @@ const fmtFecha = (iso?: string): string => {
 }
 
 export default function Administracion() {
-  const { admin, setAdmin, adminStatus } = useAcceso()
+  const { admin, setAdmin, adminStatus, sesion } = useAcceso()
   const [tab, setTab] = useState<Tab>('colegios')
   const [ahora] = useState(() => Date.now()) // referencia fija del render para la tabla de uso
 
@@ -46,15 +47,8 @@ export default function Administracion() {
     })
     return () => { alive = false }
   }, [])
-  useEffect(() => {
-    if (!ready) return
-    saveLocal(data)
-    const t = window.setTimeout(() => {
-      setStatus('Guardando…')
-      saveRemote(data).then((r) => setStatus(r.ok ? 'Sincronizado' : 'Sin conexión · local'))
-    }, 700)
-    return () => clearTimeout(t)
-  }, [data, ready])
+  // guardado con debounce + flush al desmontar (ver lib/persistencia)
+  usePersistencia(data, ready, saveLocal, saveRemote, setStatus)
 
   // ── Colegios: carga masiva ──
   const [importInfo, setImportInfo] = useState<{ msg: string; errores: string[] } | null>(null)
@@ -184,7 +178,10 @@ export default function Administracion() {
     const r = await crearUsuario(admin, { nombre: uNombre, apellido: uApellido, correo: uCorreo, fechaIngreso: uFecha, rol: uRol, asesorId })
     if (!r.ok) { toast(r.error, 'err'); return }
     let nuevoAdmin = r.data
-    // rol asesor sin hoja existente → crea su hoja de asesor y la liga
+    // rol asesor sin hoja existente → crea su hoja de asesor y la liga.
+    // (El usuario vive en psp_admin y la hoja en psp_planeacion: dos guardados
+    // independientes. Si uno fallara offline, el portal muestra «Tu hoja aún no
+    // está lista» en vez de romperse, y se auto-corrige al siguiente sync.)
     if (uRol === 'asesor' && !asesorId) {
       const nuevoAse = { id: `ase-u-${r.usuario.id.replace(/^usr-/, '')}`, nombre: `${r.usuario.nombre} ${r.usuario.apellido}`.trim() }
       setData((d) => ({ ...d, asesores: [...d.asesores, nuevoAse] }))
@@ -201,6 +198,27 @@ export default function Administracion() {
     const { data: d2, tempPassword } = await resetPassword(admin, u.id)
     setAdmin(d2)
     setTempCreada({ nombre: `${u.nombre} ${u.apellido}`, correo: u.correo, pass: tempPassword })
+  }
+
+  // Guardas anti-lockout: nadie puede quedarse (ni dejar al equipo) sin administrador.
+  const cambiarRol = (u: Usuario, nuevoRol: Rol) => {
+    if (nuevoRol === u.rol) return
+    if (nuevoRol !== 'admin' && esUnicoAdminActivo(admin.usuarios, u.id)) {
+      toast('No puedes quitar el rol al único administrador activo.', 'err'); return
+    }
+    if (u.id === sesion.usuarioId && nuevoRol !== 'admin') {
+      toast('No puedes cambiar tu propio rol de administrador.', 'err'); return
+    }
+    setAdmin(patchUsuario(admin, u.id, { rol: nuevoRol }))
+  }
+  const alternarActivo = (u: Usuario) => {
+    if (u.activo && u.id === sesion.usuarioId) {
+      toast('No puedes desactivar tu propia cuenta.', 'err'); return
+    }
+    if (u.activo && esUnicoAdminActivo(admin.usuarios, u.id)) {
+      toast('No puedes desactivar al único administrador activo.', 'err'); return
+    }
+    setAdmin(patchUsuario(admin, u.id, { activo: !u.activo }))
   }
 
   const nombreAsesor = (id?: string) => id ? (data.asesores.find((a) => a.id === id)?.nombre ?? id) : '—'
@@ -361,7 +379,7 @@ export default function Administracion() {
                   <td>{u.nombre} {u.apellido}{u.tempPassword && <span title="Aún no cambia su contraseña temporal" style={{ marginLeft: 5, fontSize: 9, fontWeight: 700, color: '#8A6D1C', background: 'var(--gold-wash)', padding: '1px 5px', borderRadius: 6 }}>TEMP</span>}</td>
                   <td style={{ color: 'var(--mut)' }}>{u.correo}</td>
                   <td>
-                    <select value={u.rol} aria-label="Rol" onChange={(e) => setAdmin(patchUsuario(admin, u.id, { rol: e.target.value as Rol }))}
+                    <select value={u.rol} aria-label="Rol" onChange={(e) => cambiarRol(u, e.target.value as Rol)}
                       style={{ fontSize: 11.5, width: 'auto' }}>
                       {ROLES.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
                     </select>
@@ -369,7 +387,7 @@ export default function Administracion() {
                   <td style={{ whiteSpace: 'nowrap' }}>{fmtFecha(u.fechaIngreso)}</td>
                   <td style={{ color: 'var(--mut)' }}>{u.rol === 'asesor' ? nombreAsesor(u.asesorId) : '—'}</td>
                   <td>
-                    <button className="sec" style={{ fontSize: 11 }} onClick={() => setAdmin(patchUsuario(admin, u.id, { activo: !u.activo }))}>
+                    <button className="sec" style={{ fontSize: 11 }} onClick={() => alternarActivo(u)}>
                       {u.activo ? 'Activo' : 'Inactivo'}
                     </button>
                   </td>

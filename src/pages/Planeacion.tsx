@@ -8,6 +8,7 @@ import {
 } from '../data/planeacion'
 import type { PlaneacionData, Estatus, Servicio, Colegio } from '../data/planeacion'
 import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
+import { usePersistencia } from '../lib/persistencia'
 import { NumberTicker } from '../ui/NumberTicker'
 import { Seg } from '../ui/Seg'
 import { toast } from '../ui/toastBus'
@@ -50,16 +51,8 @@ export default function Planeacion() {
     return () => { alive = false }
   }, [])
 
-  // guardado: local inmediato + remoto con debounce
-  useEffect(() => {
-    if (!ready) return
-    saveLocal(data)
-    const t = window.setTimeout(() => {
-      setStatus('Guardando…')
-      saveRemote(data).then((r) => setStatus(r.ok ? 'Sincronizado' : 'Sin conexión · local'))
-    }, 700)
-    return () => clearTimeout(t)
-  }, [data, ready])
+  // guardado con debounce + flush al desmontar (ver lib/persistencia)
+  usePersistencia(data, ready, saveLocal, saveRemote, setStatus)
 
   // asesor seleccionado válido (derivado, sin efecto): cae al primero si el actual no existe
   const target = data.asesores.some((a) => a.id === targetSel) ? targetSel : (data.asesores[0]?.id ?? '')

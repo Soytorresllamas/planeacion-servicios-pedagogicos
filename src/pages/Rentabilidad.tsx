@@ -9,6 +9,7 @@ import {
 } from '../data/planeacion'
 import type { PlaneacionData, Servicio, Colegio } from '../data/planeacion'
 import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
+import { usePersistencia } from '../lib/persistencia'
 import { SMART, CORE, EST_LABEL, SERV_LABEL, tierLabel } from '../features/planeacion/colors'
 import { NumberTicker } from '../ui/NumberTicker'
 import { Seg } from '../ui/Seg'
@@ -52,15 +53,8 @@ export default function Rentabilidad() {
     return () => { alive = false }
   }, [])
 
-  useEffect(() => {
-    if (!ready) return
-    saveLocal(data)
-    const t = window.setTimeout(() => {
-      setStatus('Guardando…')
-      saveRemote(data).then((r) => setStatus(r.ok ? 'Sincronizado' : 'Sin conexión · local'))
-    }, 700)
-    return () => clearTimeout(t)
-  }, [data, ready])
+  // guardado con debounce + flush al desmontar (ver lib/persistencia)
+  usePersistencia(data, ready, saveLocal, saveRemote, setStatus)
 
   const setServ = (colegioId: string, idx: number, patch: Partial<Servicio>) =>
     setData((d) => ({ ...d, colegios: setServicio(d.colegios, colegioId, idx, patch) }))

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   crearUsuario, autenticar, cambiarPassword, resetPassword, registrarIngreso,
   usoResumen, agregarCatalogo, quitarCatalogo, renombrarCatalogo,
-  genTempPassword, correoValido, defaultAdminData, patchUsuario,
+  genTempPassword, correoValido, defaultAdminData, patchUsuario, esUnicoAdminActivo,
 } from './usuarios';
 import type { AdminData, NuevoUsuario } from './usuarios';
 
@@ -61,6 +61,30 @@ describe('crearUsuario / autenticar / contraseña temporal', () => {
     if (!r.ok) throw new Error(r.error);
     const d2 = patchUsuario(r.data, r.usuario.id, { activo: false });
     expect(await autenticar(d2, 'laura@sm.com.mx', r.tempPassword)).toBeNull();
+  });
+});
+
+describe('id único y último admin (blindaje de lockouts)', () => {
+  it('dos correos que normalizan al mismo slug reciben ids distintos', async () => {
+    let d = base();
+    const r1 = await crearUsuario(d, nuevo({ correo: 'a.b@sm.com.mx' }), rndFijo); if (!r1.ok) throw new Error(r1.error); d = r1.data;
+    const r2 = await crearUsuario(d, nuevo({ correo: 'a-b@sm.com.mx' }), rndFijo); if (!r2.ok) throw new Error(r2.error);
+    expect(r1.usuario.id).toBe('usr-a-b-sm-com-mx');
+    expect(r2.usuario.id).toBe('usr-a-b-sm-com-mx-2');
+    expect(r1.usuario.id).not.toBe(r2.usuario.id);
+  });
+
+  it('esUnicoAdminActivo detecta al único admin activo', async () => {
+    const d = defaultAdminData(); // trae 1 admin (usr-admin)
+    expect(esUnicoAdminActivo(d.usuarios, 'usr-admin')).toBe(true);
+    // agregar un segundo admin → ya no es único
+    const r = await crearUsuario(d, nuevo({ correo: 'admin2@sm.com.mx', rol: 'admin' })); if (!r.ok) throw new Error(r.error);
+    expect(esUnicoAdminActivo(r.data.usuarios, 'usr-admin')).toBe(false);
+    // si el segundo se desactiva, el primero vuelve a ser único
+    const d2 = patchUsuario(r.data, r.usuario.id, { activo: false });
+    expect(esUnicoAdminActivo(d2.usuarios, 'usr-admin')).toBe(true);
+    // un asesor nunca es "único admin"
+    expect(esUnicoAdminActivo(d.usuarios, 'no-existe')).toBe(false);
   });
 });
 

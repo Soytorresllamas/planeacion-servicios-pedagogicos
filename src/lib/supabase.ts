@@ -10,6 +10,11 @@ export const supabase = createClient(URL, KEY, {
   auth: { persistSession: false },
 })
 
+// Ref del proyecto (subdominio de la URL). Se guarda junto al caché local para
+// descartarlo si la app cambia de backend: así datos de un Supabase anterior no
+// contaminan uno nuevo (L1 de la auditoría).
+export const PROJECT_REF = URL.replace(/^https?:\/\//, '').split('.')[0]
+
 
 export const PLANEACION_TABLE = 'psp_planeacion'
 export const PLANEACION_ROW = 'planeacion-v3'

@@ -1,4 +1,4 @@
-import { supabase, PLANEACION_TABLE, PLANEACION_ROW } from './supabase';
+import { supabase, PLANEACION_TABLE, PLANEACION_ROW, PROJECT_REF } from './supabase';
 import { LS_PLANEACION } from './localData';
 import type { PlaneacionData, Colegio } from '../data/planeacion';
 
@@ -19,15 +19,15 @@ export const loadLocal = (): PlaneacionData | null => {
   try {
     const raw = localStorage.getItem(LS_PLANEACION);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { v?: number; data?: unknown };
-    // Solo se acepta el formato versionado actual; lo demás se ignora.
-    if (parsed && parsed.v === SCHEMA_V && valid(parsed.data)) return parsed.data;
+    const parsed = JSON.parse(raw) as { v?: number; backend?: string; data?: unknown };
+    // Solo se acepta el formato versionado actual y del backend actual.
+    if (parsed && parsed.v === SCHEMA_V && parsed.backend === PROJECT_REF && valid(parsed.data)) return parsed.data;
   } catch { /* noop */ }
   return null;
 };
 
 export const saveLocal = (data: PlaneacionData): void => {
-  try { localStorage.setItem(LS_PLANEACION, JSON.stringify({ v: SCHEMA_V, data })); } catch { /* noop */ }
+  try { localStorage.setItem(LS_PLANEACION, JSON.stringify({ v: SCHEMA_V, backend: PROJECT_REF, data })); } catch { /* noop */ }
 };
 
 export type LoadRemoteResult =
