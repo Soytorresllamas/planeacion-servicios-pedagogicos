@@ -59,3 +59,25 @@ cambiarPassword` por las llamadas de Auth.
 **Persistencia:** `psp_planeacion` (colegios/asesores/alertas) y `psp_admin`
 (usuarios/catálogos), con espejo local versionado (`psp-planeacion-v3`, `psp-admin-v3`)
 y sesión en `sessionStorage` (`psp-sesion-v3`).
+
+## Respaldos diarios (Administración → Respaldos)
+
+- **Qué:** una copia diaria de cada tablero (`psp_planeacion` y `psp_admin`) en la
+  tabla `psp_respaldos`. Un snapshot por día por tabla.
+- **Cuándo:** automáticamente en el **primer acceso del día** (captura el estado con
+  que empieza la jornada = cierre del día anterior). Deduplicado por navegador con
+  una marca en `localStorage`, así que a lo más se escribe un snapshot por día.
+- **Retención:** se conservan los últimos **30 días** (`RETENCION_DIAS`); los más
+  viejos se podan al crear el del día.
+- **Restaurar:** solo admin, desde la pestaña Respaldos. Reemplaza los datos actuales
+  de esa sección con los de la fecha elegida (con confirmación). Restaurar «Usuarios»
+  exige que el snapshot tenga un administrador activo, para no provocar un lockout.
+- **Manual:** botón «Respaldar ahora» crea/actualiza el snapshot del día al instante
+  (útil antes de una operación riesgosa como una carga masiva).
+- **Requisito:** la tabla `psp_respaldos` debe existir (está en `supabase_setup.sql`).
+  Sin ella, la app funciona igual y solo omite los respaldos (avisa con un toast al
+  intentar «Respaldar ahora»).
+- **Off-site:** para proteger contra la pérdida del proyecto Supabase completo, activar
+  además los **backups automáticos de Supabase** (plan Pro) — pendiente/independiente.
+- Código: `src/lib/respaldos.ts` (helpers puros + operaciones), disparo en
+  `planeacionStore`/`adminStore`, UI en `pages/Administracion.tsx`.
