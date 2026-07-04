@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import type { ReactElement } from 'react'
+import type { ComponentType, ReactElement } from 'react'
 import logoSM from './assets/logo-sm.svg'
 import { Toaster } from './ui/toast'
 import { RouteSkeleton } from './ui/Skeleton'
@@ -8,13 +8,35 @@ import { useAcceso } from './lib/accesoCtx'
 import { tabsPorRol, rutaInicial, rutaPermitida } from './lib/sesion'
 import { ROLES } from './data/usuarios'
 
-const Simulador = lazy(() => import('./pages/Simulador.tsx'))
-const Planeacion = lazy(() => import('./pages/Planeacion.tsx'))
-const Rentabilidad = lazy(() => import('./pages/Rentabilidad.tsx'))
-const Administracion = lazy(() => import('./pages/Administracion.tsx'))
-const Streamgraph = lazy(() => import('./pages/Streamgraph.tsx'))
-const Documentos = lazy(() => import('./pages/Documentos.tsx'))
-const HojaAsesor = lazy(() => import('./pages/HojaAsesor.tsx'))
+// Los chunks de rutas cambian de nombre en cada deploy: si alguien tiene la app
+// abierta durante uno (o el CDN aún no propaga un sitio recién publicado), el
+// import dinámico da 404 y React lo lanza al ErrorBoundary. Antes de rendirnos,
+// reintentamos con UNA recarga automática (candado en sessionStorage para no
+// ciclar); la recarga trae el index.html nuevo con los nombres correctos.
+const lazyConReintento = (importar: () => Promise<{ default: ComponentType }>, clave: string) =>
+  lazy(() => {
+    const candado = `psp-chunk-retry-${clave}`
+    return importar()
+      .then((m) => { try { sessionStorage.removeItem(candado) } catch { /* noop */ } return m })
+      .catch((err) => {
+        try {
+          if (!sessionStorage.getItem(candado)) {
+            sessionStorage.setItem(candado, '1')
+            window.location.reload()
+            return new Promise<never>(() => {}) // la recarga toma el control
+          }
+        } catch { /* noop */ }
+        throw err // segundo fallo seguido → que lo atienda el ErrorBoundary
+      })
+  })
+
+const Simulador = lazyConReintento(() => import('./pages/Simulador.tsx'), 'simulador')
+const Planeacion = lazyConReintento(() => import('./pages/Planeacion.tsx'), 'planeacion')
+const Rentabilidad = lazyConReintento(() => import('./pages/Rentabilidad.tsx'), 'rentabilidad')
+const Administracion = lazyConReintento(() => import('./pages/Administracion.tsx'), 'administracion')
+const Streamgraph = lazyConReintento(() => import('./pages/Streamgraph.tsx'), 'servicios')
+const Documentos = lazyConReintento(() => import('./pages/Documentos.tsx'), 'documentos')
+const HojaAsesor = lazyConReintento(() => import('./pages/HojaAsesor.tsx'), 'mi-hoja')
 
 export default function App() {
   const { sesion, salir } = useAcceso()
