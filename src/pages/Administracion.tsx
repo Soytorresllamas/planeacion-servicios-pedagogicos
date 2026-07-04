@@ -14,12 +14,17 @@ import type { PlaneacionData } from '../data/planeacion'
 import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
 import { usePersistencia } from '../lib/persistencia'
 import { leerArchivo, mapearFilas } from '../lib/importColegios'
+import {
+  listarRespaldos, obtenerRespaldo, respaldarAhora, RETENCION_DIAS, ETIQUETA,
+} from '../lib/respaldos'
+import type { RespaldoMeta, TablaRespaldo } from '../lib/respaldos'
+import type { AdminData } from '../data/usuarios'
 import { Seg } from '../ui/Seg'
 import { NumberTicker } from '../ui/NumberTicker'
 import { toast } from '../ui/toastBus'
 import { SMART, CORE } from '../features/planeacion/colors'
 
-type Tab = 'colegios' | 'catalogos' | 'usuarios' | 'uso'
+type Tab = 'colegios' | 'catalogos' | 'usuarios' | 'uso' | 'respaldos'
 
 const fmtFecha = (iso?: string): string => {
   if (!iso) return '—'
@@ -228,17 +233,68 @@ export default function Administracion() {
   const usuariosPorUso = useMemo(() =>
     [...admin.usuarios].sort((a, b) => (b.ultimoIngreso ?? '').localeCompare(a.ultimoIngreso ?? '')), [admin.usuarios])
 
+  // ── Respaldos ──
+  const [respaldos, setRespaldos] = useState<RespaldoMeta[]>([])
+  const [cargandoResp, setCargandoResp] = useState(true)
+  const [ocupadoResp, setOcupadoResp] = useState(false)
+  // botón «Actualizar» (event handler): puede poner el spinner de inmediato
+  const cargarRespaldos = () => {
+    setCargandoResp(true)
+    listarRespaldos().then((r) => { setRespaldos(r); setCargandoResp(false) })
+  }
+  // carga inicial al abrir la pestaña (sin setState síncrono en el efecto)
+  useEffect(() => {
+    if (tab !== 'respaldos') return
+    let vivo = true
+    listarRespaldos().then((r) => { if (vivo) { setRespaldos(r); setCargandoResp(false) } })
+    return () => { vivo = false }
+  }, [tab])
+
+  const respaldarTodoAhora = async () => {
+    setOcupadoResp(true)
+    const okP = await respaldarAhora('planeacion', data)
+    const okA = await respaldarAhora('admin', admin)
+    setOcupadoResp(false)
+    toast(okP && okA ? 'Respaldo del día creado' : 'No se pudo respaldar (¿falta la tabla psp_respaldos?)', okP && okA ? 'ok' : 'err')
+    cargarRespaldos()
+  }
+
+  const restaurar = async (m: RespaldoMeta) => {
+    if (!window.confirm(
+      `Restaurar «${ETIQUETA[m.tabla]}» al respaldo del ${m.fecha}.\n\n` +
+      `Esto REEMPLAZA los datos actuales de ${ETIQUETA[m.tabla]}` +
+      (m.tabla === 'admin' ? ' (usuarios, roles y contraseñas), incluida posiblemente tu propia cuenta.' : '.') +
+      `\n\n¿Continuar?`)) return
+    setOcupadoResp(true)
+    const contenido = await obtenerRespaldo(m.id)
+    setOcupadoResp(false)
+    if (!contenido) { toast('No se pudo leer el respaldo', 'err'); return }
+    if (m.tabla === 'admin') {
+      const ad = contenido as AdminData
+      if (!ad.usuarios?.some((u) => u.rol === 'admin' && u.activo)) {
+        toast('Ese respaldo no tiene un administrador activo; no se restaura para evitar un lockout.', 'err'); return
+      }
+      setAdmin(ad)
+    } else {
+      setData(contenido as PlaneacionData)
+    }
+    toast(`Restaurado «${ETIQUETA[m.tabla]}» del ${m.fecha}`, 'ok')
+  }
+
+  const respaldosPorTabla = (t: TablaRespaldo) => respaldos.filter((r) => r.tabla === t)
+
   return (
     <div>
       <h1>Administración</h1>
       <div className="sub">Catálogo de colegios, gerencias y ejecutivos comerciales, cuentas de usuario y su uso.
         <b> · Colegios: {status} · Cuentas: {adminStatus}</b></div>
 
-      <Seg maxWidth={560} value={tab} onChange={setTab} options={[
+      <Seg maxWidth={680} value={tab} onChange={setTab} options={[
         { key: 'colegios', label: 'Colegios' },
         { key: 'catalogos', label: 'Catálogos' },
         { key: 'usuarios', label: 'Usuarios' },
         { key: 'uso', label: 'Uso' },
+        { key: 'respaldos', label: 'Respaldos' },
       ]} />
 
       {tab === 'colegios' && (<>
@@ -434,6 +490,50 @@ export default function Administracion() {
           </table>
           <div className="hint">La señal marca a quién dar seguimiento: cuentas sin primer ingreso o sin actividad reciente.</div>
         </div>
+      </>)}
+
+      {tab === 'respaldos' && (<>
+        <div className="panel">
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0, flex: 1 }}>Respaldos diarios</h3>
+            <button className="sec" onClick={cargarRespaldos} disabled={cargandoResp || ocupadoResp}>↻ Actualizar</button>
+            <button className="gate-btn" style={{ width: 'auto', padding: '8px 16px' }} onClick={respaldarTodoAhora} disabled={ocupadoResp}>
+              {ocupadoResp ? 'Trabajando…' : '💾 Respaldar ahora'}
+            </button>
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--mut)', margin: '6px 0 0', lineHeight: 1.5 }}>
+            Cada día, en el primer acceso, se guarda automáticamente una copia de <b>Planeación</b> y de
+            <b> Usuarios y catálogos</b>. Se conservan los últimos <b>{RETENCION_DIAS} días</b>. Restaurar
+            reemplaza los datos actuales de esa sección con los de la fecha elegida.
+          </p>
+        </div>
+
+        {(['planeacion', 'admin'] as TablaRespaldo[]).map((t) => {
+          const lista = respaldosPorTabla(t)
+          return (
+            <div className="panel" key={t}>
+              <h3>{ETIQUETA[t]} · {lista.length} respaldo{lista.length === 1 ? '' : 's'}</h3>
+              {cargandoResp ? <div className="hint">Cargando…</div>
+                : lista.length === 0 ? <div className="hint">Aún no hay respaldos. Se creará uno en el próximo acceso, o pulsa «Respaldar ahora».</div>
+                : (
+                  <table>
+                    <thead><tr><th>Fecha</th><th>Creado</th><th></th></tr></thead>
+                    <tbody>
+                      {lista.map((m) => (
+                        <tr key={m.id}>
+                          <td style={{ fontWeight: 600 }}>{m.fecha}</td>
+                          <td style={{ color: 'var(--mut)' }}>{fmtFecha(m.created_at)}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button className="sec" style={{ fontSize: 11 }} disabled={ocupadoResp} onClick={() => restaurar(m)}>Restaurar</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+            </div>
+          )
+        })}
       </>)}
     </div>
   )

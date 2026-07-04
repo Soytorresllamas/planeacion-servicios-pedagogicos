@@ -2,6 +2,7 @@
 // local versionado + Supabase (tabla psp_admin) con degradación a local.
 // Mismo patrón que planeacionStore.
 import { supabase, PROJECT_REF } from './supabase';
+import { respaldarSiNuevoDia } from './respaldos';
 import { defaultAdminData } from '../data/usuarios';
 import type { AdminData } from '../data/usuarios';
 
@@ -40,7 +41,10 @@ export async function loadRemoteAdmin(): Promise<LoadAdminResult> {
     const { data, error } = await supabase.from(ADMIN_TABLE).select('data').eq('id', ADMIN_ROW).maybeSingle();
     if (error) return { data: null, source: 'none', error };
     const payload = data?.data as unknown;
-    if (valid(payload) && payload.usuarios.length) return { data: payload, source: 'remote' };
+    if (valid(payload) && payload.usuarios.length) {
+      void respaldarSiNuevoDia('admin', payload); // snapshot diario (no bloquea la carga)
+      return { data: payload, source: 'remote' };
+    }
     return { data: null, source: 'none' };
   } catch (e) {
     return { data: null, source: 'none', error: e };

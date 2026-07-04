@@ -1,5 +1,6 @@
 import { supabase, PLANEACION_TABLE, PLANEACION_ROW, PROJECT_REF } from './supabase';
 import { LS_PLANEACION } from './localData';
+import { respaldarSiNuevoDia } from './respaldos';
 import type { PlaneacionData, Colegio } from '../data/planeacion';
 
 // Versión del esquema local. Súbela cuando cambie la forma de PlaneacionData:
@@ -39,7 +40,10 @@ export async function loadRemote(): Promise<LoadRemoteResult> {
     const { data, error } = await supabase.from(PLANEACION_TABLE).select('data').eq('id', PLANEACION_ROW).maybeSingle();
     if (error) return { data: null, source: 'none', error };
     const payload = data?.data as unknown;
-    if (valid(payload) && payload.colegios.length) return { data: payload, source: 'remote' };
+    if (valid(payload) && payload.colegios.length) {
+      void respaldarSiNuevoDia('planeacion', payload); // snapshot diario (no bloquea la carga)
+      return { data: payload, source: 'remote' };
+    }
     return { data: null, source: 'none' };
   } catch (e) {
     return { data: null, source: 'none', error: e };
