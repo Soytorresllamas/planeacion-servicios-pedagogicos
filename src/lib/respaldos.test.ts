@@ -16,7 +16,7 @@ function stubLocalStorage(inicial: Record<string, string> = {}) {
 describe('respaldos · helpers puros', () => {
   it('idRespaldo combina tabla + fecha', () => {
     expect(idRespaldo('planeacion', '2026-07-04')).toBe('planeacion-2026-07-04');
-    expect(idRespaldo('admin', '2026-12-31')).toBe('admin-2026-12-31');
+    expect(idRespaldo('usuarios', '2026-12-31')).toBe('usuarios-2026-12-31');
   });
 
   it('fechaCorte resta días en UTC (incl. cruce de mes/año)', () => {
@@ -33,12 +33,12 @@ describe('respaldos · helpers puros', () => {
     localStorage.setItem(claveMarca('planeacion'), '2026-07-04');
     expect(respaldadoHoy('planeacion', '2026-07-04')).toBe(true);
     expect(respaldadoHoy('planeacion', '2026-07-05')).toBe(false); // otro día → false
-    expect(respaldadoHoy('admin', '2026-07-04')).toBe(false);       // otra tabla → false
+    expect(respaldadoHoy('usuarios', '2026-07-04')).toBe(false);       // otra tabla → false
   });
 
   it('respaldadoHoy no revienta si no hay localStorage', () => {
     // @ts-expect-error forzar ausencia
     delete globalThis.localStorage;
-    expect(respaldadoHoy('admin', '2026-07-04')).toBe(false);
+    expect(respaldadoHoy('usuarios', '2026-07-04')).toBe(false);
   });
 });

@@ -27,8 +27,7 @@ roles**, administradas desde la pestaña **Administración**.
 4. El admin puede **resetear** la contraseña (nueva temporal) o **desactivar** la
    cuenta (bloquea el acceso sin borrar historial).
 
-Cuenta semilla: `admin@sm.com.mx` / `SM-2027` (temporal: el primer ingreso pide
-cambiarla). Cambiar en cuanto se instale el tablero real.
+El primer administrador se crea en el dashboard de Supabase (ver supabase_blindaje.sql).
 
 ## Mapeo de uso
 
@@ -47,18 +46,29 @@ señal de seguimiento (Activo / N días sin entrar / Nunca ha entrado / Desactiv
 - **Usuarios**: alta con contraseña temporal, rol, hoja de asesor, activar/desactivar, reset.
 - **Uso**: los indicadores de arriba.
 
-## Seguridad (estado actual)
+## Seguridad (V3 blindada, jul 2026)
 
-La autenticación es **del lado del cliente** (SHA-256 sobre el tablero compartido
-`psp_admin`): suficiente como maqueta interna, **no** como seguridad real. El
-siguiente paso es el Supabase nuevo (pendiente de que lo entregue el usuario):
-**Supabase Auth** (los correos/contraseñas ahí) + **RLS** por rol en `psp_planeacion`
-y `psp_admin`. El flujo de la app no cambia: solo se sustituye `autenticar/
-cambiarPassword` por las llamadas de Auth.
-
-**Persistencia:** `psp_planeacion` (colegios/asesores/alertas) y `psp_admin`
-(usuarios/catálogos), con espejo local versionado (`psp-planeacion-v3`, `psp-admin-v3`)
-y sesión en `sessionStorage` (`psp-sesion-v3`).
+- **Identidad:** Supabase **Auth** (correo+contraseña, bcrypt, tokens con
+  refresco). Las contraseñas ya NO existen en el plano de datos de la app.
+- **Autorización:** **RLS** en todas las tablas (`supabase_blindaje.sql`):
+  - `psp_planeacion`: solo usuarios **activos** autenticados (los 4 roles la operan).
+  - `psp_admin` (catálogos): leen los activos; escribe solo un admin.
+  - `psp_usuarios`: cada quien su fila; el admin todas. Un **trigger** impide que
+    alguien se cambie a sí mismo rol/activo/asesor_id/correo.
+  - `psp_respaldos`: solo administradores.
+  - La publishable key sola (sin sesión) **no puede leer ni escribir nada**.
+- **Cuentas:** el admin da de alta (signUp con cliente secundario + fila de
+  perfil). Una cuenta autenticada SIN fila de perfil (p. ej. un self-signup
+  ajeno) no pasa del login: la app la expulsa y la RLS le niega los datos.
+- **Reset de contraseña:** correo de recuperación de Supabase (el enlace
+  regresa a la app y cae en la pantalla de contraseña nueva).
+- **Manejo local:** espejos locales versionados y etiquetados por backend; al
+  **salir se limpian** (nada queda en equipos compartidos); sesión JWT con
+  storageKey `psp-auth-v3` gestionada por supabase-js.
+- **Bootstrap:** primer admin creado en el dashboard (Authentication → Users) y
+  ligado por el paso BOOTSTRAP de `supabase_blindaje.sql`.
+- Pendiente futuro: separar el blob de planeación en filas por entidad para RLS
+  más granular (p. ej. que el asesor solo escriba sus servicios).
 
 ## Respaldos diarios (Administración → Respaldos)
 

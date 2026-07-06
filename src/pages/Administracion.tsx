@@ -1,24 +1,30 @@
 // Administración (solo rol admin): carga masiva de colegios, valor del colegio,
-// catálogos (gerencias, ejecutivos comerciales), usuarios (con contraseña
-// temporal) y mapeo de uso. Ver docs/07-administracion-usuarios.md.
+// catálogos (gerencias, ejecutivos comerciales), usuarios (Supabase Auth con
+// contraseña temporal), mapeo de uso y respaldos. La RLS del backend es quien
+// de verdad limita cada operación. Ver docs/07-administracion-usuarios.md.
 import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useAcceso } from '../lib/accesoCtx'
 import {
-  crearUsuario, resetPassword, patchUsuario, usoResumen, esUnicoAdminActivo, ROLES,
+  usoResumen, esUnicoAdminActivo, ROLES,
   agregarCatalogo, quitarCatalogo, renombrarCatalogo,
 } from '../data/usuarios'
-import type { Rol, Usuario } from '../data/usuarios'
+import type { Rol, Usuario, CatalogosData } from '../data/usuarios'
+import {
+  listarUsuarios, crearUsuario, patchUsuario, enviarRecuperacion, restaurarUsuarios,
+} from '../lib/usuariosStore'
 import { defaultPlaneacion, importarColegios, patchColegio, hoyISO } from '../data/planeacion'
 import type { PlaneacionData } from '../data/planeacion'
 import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
+import {
+  initialCatalogos, loadRemoteCatalogos, saveLocalCatalogos, saveRemoteCatalogos,
+} from '../lib/adminStore'
 import { usePersistencia } from '../lib/persistencia'
 import { leerArchivo, mapearFilas } from '../lib/importColegios'
 import {
-  listarRespaldos, obtenerRespaldo, respaldarAhora, RETENCION_DIAS, ETIQUETA,
+  listarRespaldos, obtenerRespaldo, respaldarAhora, RETENCION_DIAS, ETIQUETA, TABLAS_RESPALDO,
 } from '../lib/respaldos'
-import type { RespaldoMeta, TablaRespaldo } from '../lib/respaldos'
-import type { AdminData } from '../data/usuarios'
+import type { RespaldoMeta } from '../lib/respaldos'
 import { Seg } from '../ui/Seg'
 import { NumberTicker } from '../ui/NumberTicker'
 import { toast } from '../ui/toastBus'
@@ -34,11 +40,11 @@ const fmtFecha = (iso?: string): string => {
 }
 
 export default function Administracion() {
-  const { admin, setAdmin, adminStatus, sesion } = useAcceso()
+  const { sesion } = useAcceso()
   const [tab, setTab] = useState<Tab>('colegios')
   const [ahora] = useState(() => Date.now()) // referencia fija del render para la tabla de uso
 
-  // tablero de planeación (colegios/asesores), mismo patrón que Rentabilidad
+  // ── tablero de planeación (colegios/asesores), mismo patrón que Rentabilidad ──
   const [data, setData] = useState<PlaneacionData>(() => loadLocal() ?? defaultPlaneacion())
   const [ready, setReady] = useState(false)
   const [status, setStatus] = useState('Cargando…')
@@ -52,8 +58,32 @@ export default function Administracion() {
     })
     return () => { alive = false }
   }, [])
-  // guardado con debounce + flush al desmontar (ver lib/persistencia)
   usePersistencia(data, ready, saveLocal, saveRemote, setStatus)
+
+  // ── catálogos (tabla psp_admin, solo gerencias/ejecutivos; escribe solo admin) ──
+  const [catalogos, setCatalogos] = useState<CatalogosData>(initialCatalogos)
+  const [catReady, setCatReady] = useState(false)
+  useEffect(() => {
+    let alive = true
+    loadRemoteCatalogos().then((res) => {
+      if (!alive) return
+      if (res.source === 'remote') setCatalogos(res.data)
+      setCatReady(true)
+    })
+    return () => { alive = false }
+  }, [])
+  usePersistencia(catalogos, catReady, saveLocalCatalogos, saveRemoteCatalogos)
+
+  // ── usuarios (tabla psp_usuarios; la identidad vive en Supabase Auth) ──
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [cargandoUsuarios, setCargandoUsuarios] = useState(true)
+  const refrescarUsuarios = () =>
+    listarUsuarios().then((rows) => { setUsuarios(rows); setCargandoUsuarios(false) })
+  useEffect(() => {
+    let vivo = true
+    listarUsuarios().then((rows) => { if (vivo) { setUsuarios(rows); setCargandoUsuarios(false) } })
+    return () => { vivo = false }
+  }, [])
 
   // ── Colegios: carga masiva ──
   const [importInfo, setImportInfo] = useState<{ msg: string; errores: string[] } | null>(null)
@@ -77,13 +107,13 @@ export default function Administracion() {
       const { data: nd, resumen } = importarColegios(data, filas)
       setData(nd)
       // los catálogos se alimentan del archivo (gerencias y ejecutivos nuevos)
-      setAdmin((a) => {
-        let gerencias = a.gerencias, ejecutivos = a.ejecutivos
+      setCatalogos((c) => {
+        let gerencias = c.gerencias, ejecutivos = c.ejecutivos
         for (const f of filas) {
           if (f.gerencia) gerencias = agregarCatalogo(gerencias, f.gerencia)
           if (f.ejecutivo) ejecutivos = agregarCatalogo(ejecutivos, f.ejecutivo)
         }
-        return { ...a, gerencias, ejecutivos }
+        return { gerencias, ejecutivos }
       })
       setImportInfo({
         msg: `✓ ${resumen.colegios} colegios importados (SMART ${resumen.porCampaign.SMART} · CORE ${resumen.porCampaign.CORE}) · ` +
@@ -113,7 +143,7 @@ export default function Administracion() {
   const [editCat, setEditCat] = useState<{ tipo: 'gerencias' | 'ejecutivos'; valor: string; texto: string } | null>(null)
   const renombrarConPropagacion = (tipo: 'gerencias' | 'ejecutivos', viejo: string, nuevo: string) => {
     if (!nuevo.trim() || nuevo === viejo) return
-    setAdmin((a) => ({ ...a, [tipo]: renombrarCatalogo(a[tipo], viejo, nuevo) }))
+    setCatalogos((c) => ({ ...c, [tipo]: renombrarCatalogo(c[tipo], viejo, nuevo) }))
     // propaga a los colegios que lo referencian
     const campo = tipo === 'gerencias' ? 'gerencia' : 'ejecutivo'
     setData((d) => ({ ...d, colegios: d.colegios.map((c) => c[campo] === viejo ? { ...c, [campo]: nuevo.trim() } : c) }))
@@ -121,7 +151,7 @@ export default function Administracion() {
   }
 
   const catalogoPanel = (tipo: 'gerencias' | 'ejecutivos', titulo: string, nuevoVal: string, setNuevoVal: (s: string) => void) => {
-    const lista = admin[tipo]
+    const lista = catalogos[tipo]
     const campo = tipo === 'gerencias' ? 'gerencia' : 'ejecutivo'
     const usados = new Map<string, number>()
     for (const c of data.colegios) { const v = c[campo]; if (v) usados.set(v, (usados.get(v) ?? 0) + 1) }
@@ -131,7 +161,7 @@ export default function Administracion() {
         <form style={{ display: 'flex', gap: 6, marginBottom: 10 }} onSubmit={(e) => {
           e.preventDefault()
           if (!nuevoVal.trim()) return
-          setAdmin((a) => ({ ...a, [tipo]: agregarCatalogo(a[tipo], nuevoVal) }))
+          setCatalogos((c) => ({ ...c, [tipo]: agregarCatalogo(c[tipo], nuevoVal) }))
           setNuevoVal('')
         }}>
           <input value={nuevoVal} onChange={(e) => setNuevoVal(e.target.value)} placeholder={`Agregar ${titulo.toLowerCase().replace(/s$/, '')}…`}
@@ -154,7 +184,7 @@ export default function Administracion() {
             <button title="Renombrar" aria-label={`Renombrar ${v}`} onClick={() => setEditCat({ tipo, valor: v, texto: v })}
               style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--mut)' }}>✎</button>
             <button title="Quitar del catálogo" aria-label={`Quitar ${v}`}
-              onClick={() => { if (window.confirm(`¿Quitar «${v}» del catálogo? Los colegios que lo usan conservan el dato.`)) setAdmin((a) => ({ ...a, [tipo]: quitarCatalogo(a[tipo], v) })) }}
+              onClick={() => { if (window.confirm(`¿Quitar «${v}» del catálogo? Los colegios que lo usan conservan el dato.`)) setCatalogos((c) => ({ ...c, [tipo]: quitarCatalogo(c[tipo], v) })) }}
               style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 15, color: 'var(--mut)' }}>×</button>
           </div>
         ))}
@@ -169,80 +199,81 @@ export default function Administracion() {
   const [uFecha, setUFecha] = useState(hoyISO())
   const [uRol, setURol] = useState<Rol>('asesor')
   const [uAsesor, setUAsesor] = useState('nueva')  // 'nueva' | id de asesor existente
+  const [creando, setCreando] = useState(false)
   const [tempCreada, setTempCreada] = useState<{ nombre: string; correo: string; pass: string } | null>(null)
 
   const asesoresLibres = useMemo(() => {
-    const ligados = new Set(admin.usuarios.map((u) => u.asesorId).filter(Boolean))
+    const ligados = new Set(usuarios.map((u) => u.asesorId).filter(Boolean))
     return data.asesores.filter((a) => !ligados.has(a.id))
-  }, [admin.usuarios, data.asesores])
+  }, [usuarios, data.asesores])
 
   const crear = async (e: FormEvent) => {
     e.preventDefault()
-    let asesorId: string | undefined
-    if (uRol === 'asesor') asesorId = uAsesor !== 'nueva' ? uAsesor : undefined
-    const r = await crearUsuario(admin, { nombre: uNombre, apellido: uApellido, correo: uCorreo, fechaIngreso: uFecha, rol: uRol, asesorId })
-    if (!r.ok) { toast(r.error, 'err'); return }
-    let nuevoAdmin = r.data
-    // rol asesor sin hoja existente → crea su hoja de asesor y la liga.
-    // (El usuario vive en psp_admin y la hoja en psp_planeacion: dos guardados
-    // independientes. Si uno fallara offline, el portal muestra «Tu hoja aún no
-    // está lista» en vez de romperse, y se auto-corrige al siguiente sync.)
-    if (uRol === 'asesor' && !asesorId) {
-      const nuevoAse = { id: `ase-u-${r.usuario.id.replace(/^usr-/, '')}`, nombre: `${r.usuario.nombre} ${r.usuario.apellido}`.trim() }
+    setCreando(true)
+    const asesorExistente = uRol === 'asesor' && uAsesor !== 'nueva' ? uAsesor : undefined
+    const r = await crearUsuario({ nombre: uNombre, apellido: uApellido, correo: uCorreo, fechaIngreso: uFecha, rol: uRol, asesorId: asesorExistente })
+    if (!r.ok) { toast(r.error, 'err'); setCreando(false); return }
+    let creado = r.usuario
+    // rol asesor sin hoja existente → crea su hoja en planeación y la liga al perfil
+    if (uRol === 'asesor' && !asesorExistente) {
+      const nuevoAse = { id: `ase-u-${creado.id.slice(0, 8)}`, nombre: `${creado.nombre} ${creado.apellido}`.trim() }
       setData((d) => ({ ...d, asesores: [...d.asesores, nuevoAse] }))
-      nuevoAdmin = { ...nuevoAdmin, usuarios: nuevoAdmin.usuarios.map((u) => u.id === r.usuario.id ? { ...u, asesorId: nuevoAse.id } : u) }
+      await patchUsuario(creado.id, { asesorId: nuevoAse.id })
+      creado = { ...creado, asesorId: nuevoAse.id }
     }
-    setAdmin(nuevoAdmin)
-    setTempCreada({ nombre: `${r.usuario.nombre} ${r.usuario.apellido}`, correo: r.usuario.correo, pass: r.tempPassword })
-    setUNombre(''); setUApellido(''); setUCorreo(''); setUAsesor('nueva')
-    toast(`Usuario creado: ${r.usuario.correo}`, 'ok')
+    setUsuarios((us) => [...us, creado])
+    setTempCreada({ nombre: `${creado.nombre} ${creado.apellido}`, correo: creado.correo, pass: r.tempPassword })
+    setUNombre(''); setUApellido(''); setUCorreo(''); setUAsesor('nueva'); setCreando(false)
+    toast(`Usuario creado: ${creado.correo}`, 'ok')
   }
 
   const reset = async (u: Usuario) => {
-    if (!window.confirm(`¿Generar nueva contraseña temporal para ${u.nombre} ${u.apellido}?`)) return
-    const { data: d2, tempPassword } = await resetPassword(admin, u.id)
-    setAdmin(d2)
-    setTempCreada({ nombre: `${u.nombre} ${u.apellido}`, correo: u.correo, pass: tempPassword })
+    if (!window.confirm(`Se enviará un correo de recuperación a ${u.correo} para que ponga contraseña nueva. ¿Continuar?`)) return
+    const r = await enviarRecuperacion(u.correo)
+    toast(r.ok ? `Correo de recuperación enviado a ${u.correo}` : `No se pudo enviar: ${r.error}`, r.ok ? 'ok' : 'err')
   }
 
-  // Guardas anti-lockout: nadie puede quedarse (ni dejar al equipo) sin administrador.
+  // Guardas anti-lockout (la RLS y el trigger del backend también las imponen).
+  const aplicarPatch = async (u: Usuario, patch: Partial<Usuario>) => {
+    const r = await patchUsuario(u.id, patch)
+    if (!r.ok) { toast(`No se pudo guardar: ${r.error}`, 'err'); return }
+    setUsuarios((us) => us.map((x) => (x.id === u.id ? { ...x, ...patch } : x)))
+  }
   const cambiarRol = (u: Usuario, nuevoRol: Rol) => {
     if (nuevoRol === u.rol) return
-    if (nuevoRol !== 'admin' && esUnicoAdminActivo(admin.usuarios, u.id)) {
+    if (nuevoRol !== 'admin' && esUnicoAdminActivo(usuarios, u.id)) {
       toast('No puedes quitar el rol al único administrador activo.', 'err'); return
     }
     if (u.id === sesion.usuarioId && nuevoRol !== 'admin') {
       toast('No puedes cambiar tu propio rol de administrador.', 'err'); return
     }
-    setAdmin(patchUsuario(admin, u.id, { rol: nuevoRol }))
+    void aplicarPatch(u, { rol: nuevoRol })
   }
   const alternarActivo = (u: Usuario) => {
     if (u.activo && u.id === sesion.usuarioId) {
       toast('No puedes desactivar tu propia cuenta.', 'err'); return
     }
-    if (u.activo && esUnicoAdminActivo(admin.usuarios, u.id)) {
+    if (u.activo && esUnicoAdminActivo(usuarios, u.id)) {
       toast('No puedes desactivar al único administrador activo.', 'err'); return
     }
-    setAdmin(patchUsuario(admin, u.id, { activo: !u.activo }))
+    void aplicarPatch(u, { activo: !u.activo })
   }
 
   const nombreAsesor = (id?: string) => id ? (data.asesores.find((a) => a.id === id)?.nombre ?? id) : '—'
 
   // ── Uso ──
-  const uso = usoResumen(admin.usuarios)
+  const uso = usoResumen(usuarios)
   const usuariosPorUso = useMemo(() =>
-    [...admin.usuarios].sort((a, b) => (b.ultimoIngreso ?? '').localeCompare(a.ultimoIngreso ?? '')), [admin.usuarios])
+    [...usuarios].sort((a, b) => (b.ultimoIngreso ?? '').localeCompare(a.ultimoIngreso ?? '')), [usuarios])
 
   // ── Respaldos ──
   const [respaldos, setRespaldos] = useState<RespaldoMeta[]>([])
   const [cargandoResp, setCargandoResp] = useState(true)
   const [ocupadoResp, setOcupadoResp] = useState(false)
-  // botón «Actualizar» (event handler): puede poner el spinner de inmediato
   const cargarRespaldos = () => {
     setCargandoResp(true)
     listarRespaldos().then((r) => { setRespaldos(r); setCargandoResp(false) })
   }
-  // carga inicial al abrir la pestaña (sin setState síncrono en el efecto)
   useEffect(() => {
     if (tab !== 'respaldos') return
     let vivo = true
@@ -253,41 +284,48 @@ export default function Administracion() {
   const respaldarTodoAhora = async () => {
     setOcupadoResp(true)
     const okP = await respaldarAhora('planeacion', data)
-    const okA = await respaldarAhora('admin', admin)
+    const okU = await respaldarAhora('usuarios', usuarios)
+    const okC = await respaldarAhora('catalogos', catalogos)
     setOcupadoResp(false)
-    toast(okP && okA ? 'Respaldo del día creado' : 'No se pudo respaldar (¿falta la tabla psp_respaldos?)', okP && okA ? 'ok' : 'err')
+    const ok = okP && okU && okC
+    toast(ok ? 'Respaldo del día creado' : 'No se pudo respaldar (¿permisos o tabla psp_respaldos?)', ok ? 'ok' : 'err')
     cargarRespaldos()
   }
 
   const restaurar = async (m: RespaldoMeta) => {
     if (!window.confirm(
       `Restaurar «${ETIQUETA[m.tabla]}» al respaldo del ${m.fecha}.\n\n` +
-      `Esto REEMPLAZA los datos actuales de ${ETIQUETA[m.tabla]}` +
-      (m.tabla === 'admin' ? ' (usuarios, roles y contraseñas), incluida posiblemente tu propia cuenta.' : '.') +
+      `Esto REEMPLAZA los datos actuales de ${ETIQUETA[m.tabla]}.` +
+      (m.tabla === 'usuarios' ? '\n(Las contraseñas NO cambian: viven en Auth y no forman parte del respaldo.)' : '') +
       `\n\n¿Continuar?`)) return
     setOcupadoResp(true)
     const contenido = await obtenerRespaldo(m.id)
-    setOcupadoResp(false)
-    if (!contenido) { toast('No se pudo leer el respaldo', 'err'); return }
-    if (m.tabla === 'admin') {
-      const ad = contenido as AdminData
-      if (!ad.usuarios?.some((u) => u.rol === 'admin' && u.activo)) {
+    if (!contenido) { setOcupadoResp(false); toast('No se pudo leer el respaldo', 'err'); return }
+    if (m.tabla === 'usuarios') {
+      const rows = contenido as Usuario[]
+      if (!rows.some((u) => u.rol === 'admin' && u.activo)) {
+        setOcupadoResp(false)
         toast('Ese respaldo no tiene un administrador activo; no se restaura para evitar un lockout.', 'err'); return
       }
-      setAdmin(ad)
+      const r = await restaurarUsuarios(rows)
+      if (!r.ok) { setOcupadoResp(false); toast(`No se pudo restaurar: ${r.error}`, 'err'); return }
+      await refrescarUsuarios()
+    } else if (m.tabla === 'catalogos') {
+      setCatalogos(contenido as CatalogosData)
     } else {
       setData(contenido as PlaneacionData)
     }
+    setOcupadoResp(false)
     toast(`Restaurado «${ETIQUETA[m.tabla]}» del ${m.fecha}`, 'ok')
   }
 
-  const respaldosPorTabla = (t: TablaRespaldo) => respaldos.filter((r) => r.tabla === t)
+  const respaldosPorTabla = (t: RespaldoMeta['tabla']) => respaldos.filter((r) => r.tabla === t)
 
   return (
     <div>
       <h1>Administración</h1>
-      <div className="sub">Catálogo de colegios, gerencias y ejecutivos comerciales, cuentas de usuario y su uso.
-        <b> · Colegios: {status} · Cuentas: {adminStatus}</b></div>
+      <div className="sub">Catálogo de colegios, gerencias y ejecutivos comerciales, cuentas de usuario, uso y respaldos.
+        <b> · Colegios: {status}</b></div>
 
       <Seg maxWidth={680} value={tab} onChange={setTab} options={[
         { key: 'colegios', label: 'Colegios' },
@@ -343,16 +381,16 @@ export default function Administracion() {
                     <select value={c.gerencia ?? ''} aria-label="Gerencia" onChange={(e) => patchCol(c.id, { gerencia: e.target.value || undefined })}
                       style={{ fontSize: 11.5, width: 'auto', minWidth: 110 }}>
                       <option value="">—</option>
-                      {admin.gerencias.map((gr) => <option key={gr} value={gr}>{gr}</option>)}
-                      {c.gerencia && !admin.gerencias.includes(c.gerencia) && <option value={c.gerencia}>{c.gerencia}</option>}
+                      {catalogos.gerencias.map((gr) => <option key={gr} value={gr}>{gr}</option>)}
+                      {c.gerencia && !catalogos.gerencias.includes(c.gerencia) && <option value={c.gerencia}>{c.gerencia}</option>}
                     </select>
                   </td>
                   <td>
                     <select value={c.ejecutivo ?? ''} aria-label="Ejecutivo comercial" onChange={(e) => patchCol(c.id, { ejecutivo: e.target.value || undefined })}
                       style={{ fontSize: 11.5, width: 'auto', minWidth: 110 }}>
                       <option value="">—</option>
-                      {admin.ejecutivos.map((ej) => <option key={ej} value={ej}>{ej}</option>)}
-                      {c.ejecutivo && !admin.ejecutivos.includes(c.ejecutivo) && <option value={c.ejecutivo}>{c.ejecutivo}</option>}
+                      {catalogos.ejecutivos.map((ej) => <option key={ej} value={ej}>{ej}</option>)}
+                      {c.ejecutivo && !catalogos.ejecutivos.includes(c.ejecutivo) && <option value={c.ejecutivo}>{c.ejecutivo}</option>}
                     </select>
                   </td>
                   <td>
@@ -405,7 +443,7 @@ export default function Administracion() {
             <label style={{ flex: '1 1 140px', margin: 0 }}>Apellido
               <input value={uApellido} onChange={(e) => setUApellido(e.target.value)} style={{ width: '100%', fontSize: 13, padding: '6px 8px', marginTop: 3 }} /></label>
             <label style={{ flex: '1 1 200px', margin: 0 }}>Correo electrónico
-              <input type="email" value={uCorreo} onChange={(e) => setUCorreo(e.target.value)} placeholder="nombre@sm.com.mx" style={{ width: '100%', fontSize: 13, padding: '6px 8px', marginTop: 3 }} /></label>
+              <input type="email" value={uCorreo} onChange={(e) => setUCorreo(e.target.value)} placeholder="nombre@grupo-sm.com" style={{ width: '100%', fontSize: 13, padding: '6px 8px', marginTop: 3 }} /></label>
             <label style={{ flex: '0 1 150px', margin: 0 }}>Fecha de ingreso
               <input type="date" value={uFecha} onChange={(e) => setUFecha(e.target.value)} style={{ width: '100%', fontSize: 13, padding: '6px 8px', marginTop: 3 }} /></label>
             <label style={{ flex: '0 1 190px', margin: 0 }}>Rol
@@ -420,17 +458,18 @@ export default function Administracion() {
                 </select></label>
             )}
             <button className="gate-btn" type="submit" style={{ width: 'auto', padding: '9px 18px' }}
-              disabled={!uNombre.trim() || !uApellido.trim() || !uCorreo.trim()}>Crear con contraseña temporal</button>
+              disabled={creando || !uNombre.trim() || !uApellido.trim() || !uCorreo.trim()}>{creando ? 'Creando…' : 'Crear con contraseña temporal'}</button>
           </form>
-          <div className="hint">Al crear se genera una contraseña temporal (se muestra una sola vez) y la persona debe cambiarla en su primer ingreso.</div>
+          <div className="hint">La cuenta se crea en Supabase Auth con una contraseña temporal (se muestra una sola vez) y la persona debe cambiarla en su primer ingreso.</div>
         </div>
 
         <div className="panel">
-          <h3>Usuarios ({admin.usuarios.length})</h3>
+          <h3>Usuarios ({usuarios.length})</h3>
+          {cargandoUsuarios ? <div className="hint">Cargando…</div> : (
           <table>
             <thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Ingreso a SM</th><th>Hoja de asesor</th><th>Estado</th><th></th></tr></thead>
             <tbody>
-              {admin.usuarios.map((u) => (
+              {usuarios.map((u) => (
                 <tr key={u.id} style={{ opacity: u.activo ? 1 : 0.5 }}>
                   <td>{u.nombre} {u.apellido}{u.tempPassword && <span title="Aún no cambia su contraseña temporal" style={{ marginLeft: 5, fontSize: 9, fontWeight: 700, color: '#8A6D1C', background: 'var(--gold-wash)', padding: '1px 5px', borderRadius: 6 }}>TEMP</span>}</td>
                   <td style={{ color: 'var(--mut)' }}>{u.correo}</td>
@@ -448,13 +487,15 @@ export default function Administracion() {
                     </button>
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <button className="sec" style={{ fontSize: 11 }} onClick={() => reset(u)}>Reset contraseña</button>
+                    <button className="sec" style={{ fontSize: 11 }} onClick={() => reset(u)}>Enviar recuperación</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div className="hint">«Inactivo» bloquea el acceso sin borrar el historial. El rol se puede cambiar en cualquier momento.</div>
+          )}
+          <div className="hint">«Inactivo» bloquea el acceso sin borrar el historial (la RLS del backend lo impone).
+            «Enviar recuperación» manda un correo con enlace para poner contraseña nueva.</div>
         </div>
       </>)}
 
@@ -502,13 +543,14 @@ export default function Administracion() {
             </button>
           </div>
           <p style={{ fontSize: 12, color: 'var(--mut)', margin: '6px 0 0', lineHeight: 1.5 }}>
-            Cada día, en el primer acceso, se guarda automáticamente una copia de <b>Planeación</b> y de
-            <b> Usuarios y catálogos</b>. Se conservan los últimos <b>{RETENCION_DIAS} días</b>. Restaurar
-            reemplaza los datos actuales de esa sección con los de la fecha elegida.
+            Cada día, en el primer acceso de un administrador, se guarda una copia de <b>Planeación</b>,
+            <b> Usuarios</b> y <b>Catálogos</b>. Se conservan los últimos <b>{RETENCION_DIAS} días</b> y solo
+            los administradores pueden verlos o restaurarlos. Restaurar reemplaza los datos actuales de esa
+            sección con los de la fecha elegida (las contraseñas nunca forman parte del respaldo).
           </p>
         </div>
 
-        {(['planeacion', 'admin'] as TablaRespaldo[]).map((t) => {
+        {TABLAS_RESPALDO.map((t) => {
           const lista = respaldosPorTabla(t)
           return (
             <div className="panel" key={t}>
