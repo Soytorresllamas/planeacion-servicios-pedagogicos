@@ -1,15 +1,12 @@
-// Contexto de acceso: sesión + tablero de administración compartidos.
+// Contexto de acceso: la sesión (derivada de Supabase Auth + psp_usuarios).
 // Separado del componente <Acceso> para que react-refresh funcione.
+// Los datos (planeación, catálogos, usuarios) los carga cada página desde su
+// store; la RLS del backend es quien de verdad limita qué puede tocar cada rol.
 import { createContext, useContext } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
-import type { AdminData } from '../data/usuarios';
 import type { Sesion } from './sesion';
 
 export interface AccesoCtx {
   sesion: Sesion;
-  admin: AdminData;
-  setAdmin: Dispatch<SetStateAction<AdminData>>;
-  adminStatus: string;   // Sincronizado / Sin conexión · local / Guardando…
   salir: () => void;
 }
 

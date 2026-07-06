@@ -1,4 +1,7 @@
 -- Setup de "SM · Planeación de Servicios Pedagógicos" (V3).
+-- ⚠ Después de este archivo, correr TAMBIÉN supabase_blindaje.sql (Auth + RLS
+-- por rol): este setup deja políticas anónimas de arranque que el blindaje
+-- elimina y sustituye.
 -- Ejecutar UNA vez en el Supabase nuevo: SQL Editor → pegar y correr.
 -- Después, poner la URL y la publishable key del proyecto en src/lib/supabase.ts.
 

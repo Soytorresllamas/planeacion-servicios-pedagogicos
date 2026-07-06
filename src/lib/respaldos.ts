@@ -8,8 +8,11 @@ import { supabase, PROJECT_REF } from './supabase';
 export const RESPALDOS_TABLE = 'psp_respaldos';
 export const RETENCION_DIAS = 30;
 
-export type TablaRespaldo = 'planeacion' | 'admin';
-export const ETIQUETA: Record<TablaRespaldo, string> = { planeacion: 'Planeación', admin: 'Usuarios y catálogos' };
+export type TablaRespaldo = 'planeacion' | 'usuarios' | 'catalogos';
+export const ETIQUETA: Record<TablaRespaldo, string> = {
+  planeacion: 'Planeación', usuarios: 'Usuarios', catalogos: 'Catálogos',
+};
+export const TABLAS_RESPALDO: TablaRespaldo[] = ['planeacion', 'usuarios', 'catalogos'];
 
 export interface RespaldoMeta { id: string; tabla: TablaRespaldo; fecha: string; created_at: string }
 
