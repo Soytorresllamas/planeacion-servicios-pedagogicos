@@ -268,6 +268,50 @@ export function quitarServicioExtra(colegios: Colegio[], colegioId: string, idx:
     : { ...c, servicios: c.servicios.filter((s, i) => i !== idx || !s.extra) });
 }
 
+// ── Detección de cambios para el guardado por filas ───────────────────────────
+// Toda mutación del tablero es inmutable (map): los elementos NO tocados
+// conservan su referencia. Eso permite detectar QUÉ cambió comparando por
+// identidad, y guardar solo esas filas (~2 KB) en vez del tablero completo.
+
+export interface CambiosPlaneacion {
+  /** true = cambió la estructura (import, regenerar, restauración): reemplazo total. */
+  estructura: boolean;
+  colegios: Colegio[];
+  asesores: { asesor: Asesor; orden: number }[];
+  alertas: Alerta[];
+}
+
+export function detectarCambios(prev: PlaneacionData, next: PlaneacionData): CambiosPlaneacion {
+  const out: CambiosPlaneacion = { estructura: false, colegios: [], asesores: [], alertas: [] };
+  if (prev === next) return out;
+  const estructura = (): CambiosPlaneacion => ({ estructura: true, colegios: [], asesores: [], alertas: [] });
+
+  // colegios: mismo número y misma identidad por posición; si no, es un reemplazo
+  if (prev.colegios.length !== next.colegios.length) return estructura();
+  for (let i = 0; i < next.colegios.length; i++) {
+    const p = prev.colegios[i], n = next.colegios[i];
+    if (p === n) continue;
+    if (p.id !== n.id) return estructura();
+    out.colegios.push(n);
+  }
+  // asesores: renombrados en su posición o agregados al final (alta de usuario/import)
+  if (next.asesores.length < prev.asesores.length) return estructura();
+  for (let i = 0; i < next.asesores.length; i++) {
+    const p = prev.asesores[i], n = next.asesores[i];
+    if (p && p.id !== n.id) return estructura();
+    if (p !== n) out.asesores.push({ asesor: n, orden: i });
+  }
+  // alertas: agregadas al final o atendidas en su posición
+  const alPrev = prev.alertas ?? [], alNext = next.alertas ?? [];
+  if (alNext.length < alPrev.length) return estructura();
+  for (let i = 0; i < alNext.length; i++) {
+    const p = alPrev[i], n = alNext[i];
+    if (p && p.id !== n.id) return estructura();
+    if (p !== n) out.alertas.push(n);
+  }
+  return out;
+}
+
 // ── Logística de viajes (sección Logística) ───────────────────────────────────
 
 /** Marca/desmarca la necesidad de viaje u hospedaje de un servicio.

@@ -72,12 +72,13 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 ## 4 · Datos y persistencia
 
 - **Supabase** URL: `https://ktmeygeuhyprilkkbfkq.supabase.co` (`PROJECT_REF` = `ktmeygeuhyprilkkbfkq`). Publishable key en `supabase.ts` (pública por diseño; la RLS es la que protege).
-- **Tablas** (SQL en `supabase_setup.sql` + `supabase_blindaje.sql`):
-  - `psp_planeacion` (fila `planeacion-v3`): colegios, asesores, alertas, costos capturados.
+- **Tablas** (V3.3 · guardado POR FILAS, ver `supabase_actualizacion_v3_3.sql`):
+  - `psp_colegios` / `psp_asesores` / `psp_alertas`: **una fila por entidad** (data jsonb + orden). Los guardados suben SOLO lo editado (~2 KB vs 1.7 MB del blob a escala real) y la RLS es granular: el asesor solo escribe SUS colegios (sin poder reasignarlos), el ejecutivo es lectura pura.
+  - `psp_planeacion` (fila `planeacion-v3`): blob LEGADO, ahora solo lectura (archivo/fallback de arranque).
   - `psp_admin` (fila `catalogos-v3`): gerencias + ejecutivos comerciales.
-  - `psp_usuarios`: perfiles (id=uid de Auth, rol, asesor_id, activo, uso).
-  - `psp_respaldos`: snapshots diarios (id `{tabla}-YYYY-MM-DD`).
-- **Patrón de guardado** (`src/lib/persistencia.ts` → `usePersistencia`): local inmediato + remoto con **debounce 700ms**, **flush al desmontar** (no perder ediciones al navegar) y **no reescribir el estado hidratado** (evita pisar ediciones concurrentes de otras pestañas/roles).
+  - `psp_usuarios`: perfiles (id=uid de Auth, rol, asesor_id, ejecutivo, activo, uso).
+  - `psp_respaldos`: snapshots diarios (id `{tabla}-YYYY-MM-DD`); el de planeación guarda el tablero ENSAMBLADO (mismo formato de siempre → restaurable).
+- **Patrón de guardado** (`lib/persistenciaPlaneacion.ts` → `usePersistenciaPlaneacion`, tablero; `lib/persistencia.ts` → `usePersistencia`, catálogos): local inmediato + remoto con **debounce 700ms**, **flush al desmontar**, **no reescribir el estado hidratado**, y para el tablero **diff por identidad** (`detectarCambios` en `data/planeacion.ts`: toda mutación es inmutable por map, así que lo no tocado conserva referencia) → upsert de filas sucias; import/regenerar/restaurar = reemplazo total (upsert primero, borrado de sobrantes después). Lectura remota paginada (PostgREST corta en 1000 filas).
 - **Respaldos** (`src/lib/respaldos.ts`): un snapshot por día por tabla (planeacion/usuarios/catalogos), automático en el 1er acceso de un admin, poda a **30 días**, restaurable desde **Administración → Respaldos** (restaurar usuarios exige admin activo; nunca toca contraseñas).
 - **Recuperación ante fallos** (`src/ErrorBoundary.tsx` + `src/lib/recarga.ts`): ante un chunk que no descarga tras un deploy, **recarga con caché-busting** (`?v=timestamp`) porque GitHub Pages cachea `index.html` 10 min y borra los chunks viejos.
 
@@ -107,13 +108,14 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 **Hecho:** V3 completa, blindada (Auth+RLS), respaldos diarios, favicon, y el fix de recarga por caché de deploy. Backend **pristino** listo para datos reales. CI verde. ~91 pruebas.
 
 **Pendientes / próximos pasos:**
-0. ⚠ **Correr `supabase_actualizacion_v3_2.sql`** en el SQL Editor del dashboard (rol
-   «viajes» + bucket `psp-reservas` con RLS). Hasta entonces: no se pueden crear usuarios
-   de viajes ni subir/abrir PDFs de reservas. (El v3_1 ya está corrido y verificado.)
+0. ⚠ **Correr `supabase_actualizacion_v3_3.sql`** (guardado por filas + RLS granular)
+   ANTES del deploy correspondiente — switchover coordinado: SQL → avisar → push.
+   Hasta entonces la app desplegada sigue leyendo el blob legado (v3_1 y v3_2 ya
+   corridos y verificados).
 1. **Cargar el catálogo real de BI** cuando lo entreguen (activa rentabilidad con valores
    reales). La plantilla ya pide niveles y contacto del colegio.
 2. **Dar de alta al equipo** (coordinación, logística, asesores) desde Administración → Usuarios.
-3. **RLS granular** (futuro): partir el blob de planeación en filas por entidad para que, p. ej., un asesor solo escriba SUS servicios (hoy cualquier usuario activo edita el tablero completo).
+3. ~~RLS granular~~ **HECHO en V3.3**: filas por entidad + asesor solo escribe SUS colegios; ejecutivo lectura pura.
 4. **Backups off-site**: al pasar Supabase a plan Pro, activar sus backups automáticos (colchón contra pérdida del proyecto entero).
 5. Borrar en Supabase → Authentication → Users el usuario de prueba `prueba-rls-borrar@gmail.com` si aparece (inerte, sin acceso).
 

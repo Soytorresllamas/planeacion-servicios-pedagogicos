@@ -9,8 +9,8 @@ import {
   hoyISO, NIVEL_LABEL,
 } from '../data/planeacion'
 import type { PlaneacionData, Servicio, FilaViaje, EstadoReserva } from '../data/planeacion'
-import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
-import { usePersistencia } from '../lib/persistencia'
+import { loadLocal, loadRemote } from '../lib/planeacionStore'
+import { usePersistenciaPlaneacion } from '../lib/persistenciaPlaneacion'
 import { subirReserva, urlReserva, borrarReserva } from '../lib/reservasStore'
 import type { TipoReserva } from '../lib/reservasStore'
 import { useAcceso } from '../lib/accesoCtx'
@@ -52,7 +52,7 @@ export default function Logistica() {
     })
     return () => { alive = false }
   }, [])
-  usePersistencia(data, ready, saveLocal, saveRemote, setStatus)
+  usePersistenciaPlaneacion(data, ready, setStatus)
 
   const hoy = hoyISO()
   const puedeCargar = sesion.rol === 'viajes' || sesion.rol === 'admin'

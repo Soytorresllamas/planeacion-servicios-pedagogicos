@@ -15,11 +15,12 @@ import {
 } from '../lib/usuariosStore'
 import { defaultPlaneacion, importarColegios, patchColegio, hoyISO } from '../data/planeacion'
 import type { PlaneacionData } from '../data/planeacion'
-import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
+import { loadLocal, loadRemote } from '../lib/planeacionStore'
 import {
   initialCatalogos, loadRemoteCatalogos, saveLocalCatalogos, saveRemoteCatalogos,
 } from '../lib/adminStore'
 import { usePersistencia } from '../lib/persistencia'
+import { usePersistenciaPlaneacion } from '../lib/persistenciaPlaneacion'
 import { leerArchivo, mapearFilas } from '../lib/importColegios'
 import {
   listarRespaldos, obtenerRespaldo, respaldarAhora, RETENCION_DIAS, ETIQUETA, TABLAS_RESPALDO,
@@ -58,7 +59,7 @@ export default function Administracion() {
     })
     return () => { alive = false }
   }, [])
-  usePersistencia(data, ready, saveLocal, saveRemote, setStatus)
+  usePersistenciaPlaneacion(data, ready, setStatus)
 
   // ── catálogos (tabla psp_admin, solo gerencias/ejecutivos; escribe solo admin) ──
   const [catalogos, setCatalogos] = useState<CatalogosData>(initialCatalogos)

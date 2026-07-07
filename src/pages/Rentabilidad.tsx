@@ -8,8 +8,8 @@ import {
   defaultPlaneacion, filasLogistica, agruparRent, rentabilidadColegio, setServicio,
 } from '../data/planeacion'
 import type { PlaneacionData, Servicio, Colegio } from '../data/planeacion'
-import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
-import { usePersistencia } from '../lib/persistencia'
+import { loadLocal, loadRemote } from '../lib/planeacionStore'
+import { usePersistenciaPlaneacion } from '../lib/persistenciaPlaneacion'
 import { SMART, CORE, EST_LABEL, SERV_LABEL, tierLabel } from '../features/planeacion/colors'
 import { NumberTicker } from '../ui/NumberTicker'
 import { Seg } from '../ui/Seg'
@@ -54,7 +54,7 @@ export default function Rentabilidad() {
   }, [])
 
   // guardado con debounce + flush al desmontar (ver lib/persistencia)
-  usePersistencia(data, ready, saveLocal, saveRemote, setStatus)
+  usePersistenciaPlaneacion(data, ready, setStatus)
 
   const setServ = (colegioId: string, idx: number, patch: Partial<Servicio>) =>
     setData((d) => ({ ...d, colegios: setServicio(d.colegios, colegioId, idx, patch) }))

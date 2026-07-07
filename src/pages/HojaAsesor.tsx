@@ -6,8 +6,8 @@ import {
   hoyISO, urgencia, agendaAsesor, serviciosDeAsesor, SATISFACCION, PROBLEMAS,
 } from '../data/planeacion'
 import type { PlaneacionData, Servicio, Colegio, ProblemaKey } from '../data/planeacion'
-import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
-import { usePersistencia } from '../lib/persistencia'
+import { loadLocal, loadRemote } from '../lib/planeacionStore'
+import { usePersistenciaPlaneacion } from '../lib/persistenciaPlaneacion'
 import { ColegioCard, ServLabel } from '../features/planeacion/ColegioCard'
 import { EST_COLOR, URG_BG, SMART, CORE } from '../features/planeacion/colors'
 import { NumberTicker } from '../ui/NumberTicker'
@@ -58,7 +58,7 @@ export default function HojaAsesor() {
   }, [])
 
   // guardado con debounce + flush al desmontar (ver lib/persistencia)
-  usePersistencia(data, ready, saveLocal, saveRemote, setStatus)
+  usePersistenciaPlaneacion(data, ready, setStatus)
 
   // modal de alerta: Escape cierra + focus-trap con Tab dentro del diálogo
   useEffect(() => {

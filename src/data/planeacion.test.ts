@@ -9,6 +9,7 @@ import {
   nivelesDeColegio, agregarServicioExtra, quitarServicioExtra,
   genTokenDirector, datosDirector, normalizarDirector, colegiosDeEjecutivo, normNombre,
   marcarNecesidadViaje, filasViajes, estadoReserva, resumenViajes,
+  detectarCambios, importarColegios,
 } from './planeacion';
 import type { Servicio, Colegio } from './planeacion';
 
@@ -374,6 +375,61 @@ describe('enlace y vista del director', () => {
     expect(d.servicios[0]).toEqual({ tipo: 'prof', estatus: 'agendado', fechaPlan: '2026-09-10', fechaReal: undefined, nivel: undefined, extra: undefined });
     expect(normalizarDirector(null)).toBeNull();        // token inválido → RPC devuelve null
     expect(normalizarDirector({ nombre: 'x' })).toBeNull();
+  });
+});
+
+describe('detectarCambios (guardado por filas)', () => {
+  const base = (): ReturnType<typeof defaultPlaneacion> => defaultPlaneacion();
+
+  it('sin cambios (misma referencia o mismo contenido intacto) no reporta nada', () => {
+    const d = base();
+    expect(detectarCambios(d, d)).toEqual({ estructura: false, colegios: [], asesores: [], alertas: [] });
+    // un map que no toca nada conserva referencias → tampoco reporta
+    const igual = { ...d, colegios: d.colegios.map((c) => c) };
+    expect(detectarCambios(d, igual).colegios).toEqual([]);
+  });
+
+  it('editar UN servicio reporta SOLO ese colegio', () => {
+    const d = base();
+    const next = { ...d, colegios: setServicio(d.colegios, 'SMART-top-001', 0, { estatus: 'realizado' }) };
+    const c = detectarCambios(d, next);
+    expect(c.estructura).toBe(false);
+    expect(c.colegios.map((x) => x.id)).toEqual(['SMART-top-001']);
+    expect(c.asesores).toEqual([]);
+  });
+
+  it('renombrar un asesor reporta solo ese asesor con su orden', () => {
+    const d = base();
+    const next = { ...d, asesores: renombrarAsesor(d.asesores, d.asesores[2].id, 'Marcela Ruiz') };
+    const c = detectarCambios(d, next);
+    expect(c.asesores).toEqual([{ asesor: { id: d.asesores[2].id, nombre: 'Marcela Ruiz' }, orden: 2 }]);
+    expect(c.colegios).toEqual([]);
+  });
+
+  it('agregar un asesor (alta de usuario) lo reporta al final', () => {
+    const d = base();
+    const nuevo = { id: 'ase-u-x', nombre: 'Nueva Asesora' };
+    const c = detectarCambios(d, { ...d, asesores: [...d.asesores, nuevo] });
+    expect(c.asesores).toEqual([{ asesor: nuevo, orden: d.asesores.length }]);
+  });
+
+  it('agregar y atender alertas reporta solo las tocadas', () => {
+    const d0 = base();
+    const d1 = agregarAlerta(d0, { fecha: '2026-10-01T10:00:00Z', asesorId: 'ase-1', colegioId: 'X', tipo: 'otros', descripcion: 'a' });
+    expect(detectarCambios(d0, d1).alertas).toHaveLength(1);
+    const d2 = atenderAlerta(d1, d1.alertas![0].id);
+    const c = detectarCambios(d1, d2);
+    expect(c.alertas).toHaveLength(1);
+    expect(c.alertas[0].atendida).toBe(true);
+  });
+
+  it('import/regenerar (cambia el número o la identidad de colegios) → estructura', () => {
+    const d = base();
+    const { data: importado } = importarColegios(d, [{ nombre: 'Real 1', campaign: 'SMART', tier: 'top' }]);
+    expect(detectarCambios(d, importado).estructura).toBe(true);
+    // mismo número pero identidades distintas también es estructura
+    const permutado = { ...d, colegios: [...d.colegios.slice(1), d.colegios[0]] };
+    expect(detectarCambios(d, permutado).estructura).toBe(true);
   });
 });
 

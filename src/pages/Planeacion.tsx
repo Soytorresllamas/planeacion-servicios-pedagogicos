@@ -8,8 +8,8 @@ import {
   agregarServicioExtra, quitarServicioExtra, marcarNecesidadViaje,
 } from '../data/planeacion'
 import type { PlaneacionData, Estatus, Servicio, Colegio, ServTipo } from '../data/planeacion'
-import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
-import { usePersistencia } from '../lib/persistencia'
+import { loadLocal, loadRemote } from '../lib/planeacionStore'
+import { usePersistenciaPlaneacion } from '../lib/persistenciaPlaneacion'
 import { NumberTicker } from '../ui/NumberTicker'
 import { Seg } from '../ui/Seg'
 import { toast } from '../ui/toastBus'
@@ -53,7 +53,7 @@ export default function Planeacion() {
   }, [])
 
   // guardado con debounce + flush al desmontar (ver lib/persistencia)
-  usePersistencia(data, ready, saveLocal, saveRemote, setStatus)
+  usePersistenciaPlaneacion(data, ready, setStatus)
 
   // asesor seleccionado válido (derivado, sin efecto): cae al primero si el actual no existe
   const target = data.asesores.some((a) => a.id === targetSel) ? targetSel : (data.asesores[0]?.id ?? '')

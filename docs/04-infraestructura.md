@@ -46,3 +46,28 @@ Antes de cualquier push:
 npm run typecheck && npm run lint && npm test && npm run build
 ```
 Todo verde = el `gate` de CI pasará.
+
+## Guardado por filas (V3.3 · revisión de estabilidad)
+
+El tablero dejó de vivir en un solo blob. Medición que motivó el cambio: con el
+catálogo real (~1,368 colegios) cada guardado subía **1.7 MB** y dos usuarios
+concurrentes se pisaban (last-write-wins del blob completo).
+
+- **Tablas**: `psp_colegios`, `psp_asesores`, `psp_alertas` (data jsonb + `orden`).
+  La lectura pagina de 1,000 en 1,000 (límite de PostgREST) y ensambla el
+  `PlaneacionData` de siempre; las páginas no cambiaron su forma de trabajar.
+- **Escritura**: `usePersistenciaPlaneacion` detecta qué cambió con
+  `detectarCambios` (diff **por identidad**: toda mutación del tablero es
+  inmutable por `map`, lo no tocado conserva su referencia) y upserta solo esas
+  filas (~2 KB). Import/regenerar/restaurar = reemplazo total: upsert de todo lo
+  nuevo PRIMERO y borrado de sobrantes al final (nunca hay hueco destructivo).
+- **Conflictos**: se reducen a dos personas editando el MISMO colegio en la misma
+  ventana de ~1 s (antes: cualquier par de ediciones simultáneas en todo el tablero).
+- **Fallo de red**: lo no guardado se re-encola y reintenta con el siguiente
+  cambio; el espejo local ya tiene todo y el estatus muestra «Sin conexión · local».
+- **Blob legado** (`psp_planeacion`): solo lectura; fallback de arranque si las
+  tablas nuevas aún no existen y archivo del estado pre-migración.
+- **Trampa de despliegue**: el SQL v3.3 (tablas + RLS + migración) debe correrse
+  ANTES del deploy que lo usa; entre ambos (~3 min) no conviene editar el tablero,
+  porque la app vieja ya no puede escribir el blob (queda de solo lectura) y la
+  nueva aún no está publicada.
