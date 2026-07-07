@@ -42,6 +42,29 @@ select{width:100%;padding:5px;border:1px solid var(--line);border-radius:8px;fon
 .nota-box{width:100%;box-sizing:border-box;margin-top:6px;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--panel-bg);color:var(--ink);font-family:inherit;font-size:13px;line-height:1.55;min-height:52px;resize:vertical;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;}
 .nota-box::placeholder{color:var(--faint);}
 .nota-box:focus{outline:none;background:var(--surface);border-color:var(--smart);box-shadow:0 0 0 3px rgba(37,99,176,.12);}
+
+/* Fila de servicio (ColegioCard): grid de escritorio · 2 líneas en móvil.
+   check·etiqueta·fecha·nivel·estatus·nota → check·etiqueta·nota / fecha·nivel·estatus.
+   .c-meta usa display:contents en escritorio (transparente al grid, cero cambio
+   visual) y flex-wrap en móvil (una sola agrupación que se acomoda). */
+.serv-row{display:grid;grid-template-columns:20px minmax(30px,1fr) auto auto auto auto;align-items:center;gap:5px;border-bottom:1px solid var(--line);padding:4px 2px;border-radius:5px;}
+.serv-row .c-chk{transform:scale(1.4);margin:0;cursor:pointer;}
+.serv-row .c-meta{display:contents;}
+.serv-row .c-fecha input[type=date]{font-size:10.5px;padding:3px 1px;width:94px;}
+.serv-row .c-nivel{font-size:10.5px;padding:3px 0;width:auto;min-width:46px;color:var(--mut);}
+.serv-row .c-nivel.con-valor{color:var(--ink-2);}
+.serv-row .c-estado{font-size:11px;padding:3px 1px;width:auto;min-width:84px;}
+/* Nota: amarillo (identidad de lápiz) + objetivo táctil de 44px (guía Apple), en todo tamaño. */
+.serv-row .c-nota{border:none;background:transparent;cursor:pointer;color:var(--gold);font-size:19px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;}
+@media(max-width:560px){
+  .serv-row{grid-template-columns:20px 1fr auto;row-gap:6px;}
+  .serv-row .c-chk{grid-column:1;grid-row:1;transform:scale(1.6);}
+  .serv-row .c-label{grid-column:2;grid-row:1;}
+  .serv-row .c-nota{grid-column:3;grid-row:1;}
+  .serv-row .c-meta{display:flex;flex-wrap:wrap;gap:6px;grid-column:1/-1;grid-row:2;padding-left:26px;}
+  .serv-row .c-fecha input[type=date],.serv-row .c-nivel,.serv-row .c-estado{font-size:12px;padding:6px 8px;min-height:33px;box-sizing:border-box;}
+  .serv-row .c-fecha input[type=date]{width:104px;}
+}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 .cols{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start;}

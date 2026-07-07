@@ -24,8 +24,6 @@ export function ServLabel({ s, u }: { s: Servicio; u: Urgencia }) {
   </>)
 }
 
-const dateStyle = { fontSize: 10.5, padding: '3px 1px', width: 94 } as const
-
 interface Props {
   c: Colegio
   hoy: string
@@ -139,12 +137,12 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
             const u = urgencia(s, hoy); const real = s.estatus === 'realizado'
             return (
               <Fragment key={i}>
-                <div style={{ display: 'grid', gridTemplateColumns: '20px minmax(30px,1fr) auto auto auto 20px', alignItems: 'center', gap: 5, background: URG_BG[u], borderBottom: '1px solid var(--line)', padding: '4px 2px', borderRadius: 5 }}>
-                  <input type="checkbox" checked={real} aria-label="Marcar realizado" style={{ transform: 'scale(1.4)', margin: 0, cursor: 'pointer' }}
+                <div className="serv-row" style={{ background: URG_BG[u] }}>
+                  <input className="c-chk" type="checkbox" checked={real} aria-label="Marcar realizado"
                     onChange={(e) => e.target.checked
                       ? onServ(i, { estatus: 'realizado', fechaReal: s.fechaReal ?? hoy })
                       : onServ(i, { estatus: s.fechaPlan ? 'agendado' : 'pendiente', fechaReal: undefined })} />
-                  <span style={{ fontSize: 12, fontWeight: 600, minWidth: 0, lineHeight: 1.2, overflowWrap: 'break-word' }}>
+                  <span className="c-label" style={{ fontSize: 12, fontWeight: 600, minWidth: 0, lineHeight: 1.2, overflowWrap: 'break-word' }}>
                     <ServLabel s={s} u={u} />
                     {s.extra && onQuitarExtra && (
                       <button title="Quitar este taller extra" aria-label="Quitar taller extra"
@@ -152,25 +150,25 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
                         style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--mut)', padding: '0 4px', verticalAlign: 'middle' }}>×</button>
                     )}
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 10, color: 'var(--mut)' }} title={real ? 'Fecha real' : 'Fecha planeada'}>
-                    {real ? 'R' : 'P'}
-                    <input type="date" aria-label={real ? 'Fecha real' : 'Fecha planeada'} value={(real ? s.fechaReal : s.fechaPlan) ?? ''}
-                      onChange={(e) => onServ(i, real ? { fechaReal: e.target.value || undefined } : { fechaPlan: e.target.value || undefined })} style={dateStyle} />
-                  </span>
-                  <select value={s.nivel ?? ''} aria-label="Nivel escolar que atiende" title="Nivel escolar que atiende este servicio"
-                    onChange={(e) => onServ(i, { nivel: (e.target.value || undefined) as NivelKey | undefined })}
-                    style={{ fontSize: 10.5, padding: '3px 0', width: 'auto', minWidth: 46, color: s.nivel ? 'var(--ink-2)' : 'var(--faint)' }}>
-                    <option value="">Nivel</option>
-                    {(niveles.length ? NIVELES.filter((n) => niveles.includes(n.key)) : NIVELES).map((n) => <option key={n.key} value={n.key}>{n.corto}</option>)}
-                    {s.nivel && !niveles.includes(s.nivel) && niveles.length > 0 && <option value={s.nivel}>{nivelCorto(s.nivel)}</option>}
-                  </select>
-                  <select value={s.estatus} aria-label="Estatus del servicio"
-                    onChange={(e) => { const est = e.target.value as Estatus; onServ(i, est === 'realizado' && !s.fechaReal ? { estatus: est, fechaReal: hoy } : { estatus: est }) }}
-                    style={{ fontSize: 11, padding: '3px 1px', width: 'auto', minWidth: 84 }}>
-                    {ESTATUS.map((e) => <option key={e} value={e}>{EST_LABEL[e]}</option>)}
-                  </select>
-                  <button title={s.nota ? 'Editar nota' : 'Agregar nota'} aria-label={s.nota ? 'Editar nota' : 'Agregar nota'} onClick={() => setNotaKey((k) => k === i ? null : i)}
-                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 14, opacity: s.nota ? 1 : 0.45, padding: '5px 6px' }}>✎</button>
+                  <div className="c-meta">
+                    <span className="c-fecha" style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 10, color: 'var(--mut)' }} title={real ? 'Fecha real' : 'Fecha planeada'}>
+                      {real ? 'R' : 'P'}
+                      <input type="date" aria-label={real ? 'Fecha real' : 'Fecha planeada'} value={(real ? s.fechaReal : s.fechaPlan) ?? ''}
+                        onChange={(e) => onServ(i, real ? { fechaReal: e.target.value || undefined } : { fechaPlan: e.target.value || undefined })} />
+                    </span>
+                    <select className={`c-nivel${s.nivel ? ' con-valor' : ''}`} value={s.nivel ?? ''} aria-label="Nivel escolar que atiende" title="Nivel escolar que atiende este servicio"
+                      onChange={(e) => onServ(i, { nivel: (e.target.value || undefined) as NivelKey | undefined })}>
+                      <option value="">Nivel</option>
+                      {(niveles.length ? NIVELES.filter((n) => niveles.includes(n.key)) : NIVELES).map((n) => <option key={n.key} value={n.key}>{n.corto}</option>)}
+                      {s.nivel && !niveles.includes(s.nivel) && niveles.length > 0 && <option value={s.nivel}>{nivelCorto(s.nivel)}</option>}
+                    </select>
+                    <select className="c-estado" value={s.estatus} aria-label="Estatus del servicio"
+                      onChange={(e) => { const est = e.target.value as Estatus; onServ(i, est === 'realizado' && !s.fechaReal ? { estatus: est, fechaReal: hoy } : { estatus: est }) }}>
+                      {ESTATUS.map((e) => <option key={e} value={e}>{EST_LABEL[e]}</option>)}
+                    </select>
+                  </div>
+                  <button className="c-nota" title={s.nota ? 'Editar nota' : 'Agregar nota'} aria-label={s.nota ? 'Editar nota' : 'Agregar nota'}
+                    onClick={() => setNotaKey((k) => k === i ? null : i)}>✎</button>
                 </div>
                 {notaKey === i && (
                   <input value={s.nota ?? ''} autoFocus placeholder="Nota…"
