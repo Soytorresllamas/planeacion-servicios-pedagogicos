@@ -5,7 +5,7 @@ import {
   defaultPlaneacion, generateColegios, asignarPorTipo, liberarPorTipo,
   contarPorTipo, cargaAsesor, resumen, setServicio, patchColegio, renombrarAsesor, avanceAsignado, ESTATUS,
   hoyISO, urgencia, agendaAsesor, serviciosDeAsesor, SERIES, INGLES, SATISFACCION, PROBLEMAS, atenderAlerta,
-  agregarServicioExtra, quitarServicioExtra,
+  agregarServicioExtra, quitarServicioExtra, marcarNecesidadViaje,
 } from '../data/planeacion'
 import type { PlaneacionData, Estatus, Servicio, Colegio, ServTipo } from '../data/planeacion'
 import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
@@ -82,6 +82,9 @@ export default function Planeacion() {
   }
   const quitarExtra = (colegioId: string, idx: number) =>
     setData((d) => ({ ...d, colegios: quitarServicioExtra(d.colegios, colegioId, idx) }))
+  // necesidad de viaje/hospedaje (módulo Logística); marcar viaje pre-marca traslado
+  const marcarViaje = (colegioId: string, idx: number, patch: { reqViaje?: boolean; reqHospedaje?: boolean }) =>
+    setData((d) => ({ ...d, colegios: marcarNecesidadViaje(d.colegios, colegioId, idx, patch) }))
 
   const res = resumen(data.colegios)
   const targetName = data.asesores.find((a) => a.id === target)?.nombre ?? '—'
@@ -434,17 +437,21 @@ export default function Planeacion() {
                     <div className="hint">Ningún servicio coincide con la búsqueda o los filtros.{filtrosActivos && <> <button className="sec" onClick={limpiarFiltros}>Limpiar filtros</button></>}</div>
                   )
                   let mesPrevio = ''
-                  return (
+                  return (<>
                     <table>
-                      <thead><tr><th style={{ width: 24 }}></th><th>Colegio</th><th>Campaña</th><th>Servicio</th><th>Estatus</th><th>Planeada</th><th>Real</th><th style={{ width: 24 }}></th></tr></thead>
+                      <thead><tr><th style={{ width: 24 }}></th><th>Colegio</th><th>Campaña</th><th>Servicio</th><th>Estatus</th><th>Planeada</th><th>Real</th>
+                        <th title="Requiere transporte (avión o camión)" style={{ width: 40 }}>✈️ Viaje</th>
+                        <th title="Requiere hospedaje" style={{ width: 40 }}>🏨 Hosp.</th>
+                        <th style={{ width: 24 }}></th></tr></thead>
                       <tbody>
                         {lista.map((r) => {
                           const u = urgencia(r.servicio, hoy)
                           const mesKey = r.servicio.fechaPlan ? r.servicio.fechaPlan.slice(0, 7) : 'sin'
                           const header = mesKey !== mesPrevio
-                            ? <tr key={'mes-' + mesKey}><td colSpan={8} style={{ background: 'var(--line)', fontWeight: 700, fontSize: 10.5, color: 'var(--ink-2)', padding: '4px 8px', textTransform: 'uppercase', letterSpacing: 0.5 }}>{mesLabel(mesKey)}</td></tr>
+                            ? <tr key={'mes-' + mesKey}><td colSpan={10} style={{ background: 'var(--line)', fontWeight: 700, fontSize: 10.5, color: 'var(--ink-2)', padding: '4px 8px', textTransform: 'uppercase', letterSpacing: 0.5 }}>{mesLabel(mesKey)}</td></tr>
                             : null
                           mesPrevio = mesKey
+                          const real = r.servicio.estatus === 'realizado'
                           return (
                             <Fragment key={r.colegioId + ':' + r.idx}>
                               {header}
@@ -456,15 +463,27 @@ export default function Planeacion() {
                                 <td style={{ padding: '2px 4px', minWidth: 110 }}>{selEstatus(r.colegioId, r.idx, r.servicio)}</td>
                                 <td style={{ padding: '2px 4px' }}>{inpPlan(r.colegioId, r.idx, r.servicio)}</td>
                                 <td style={{ padding: '2px 4px' }}>{inpReal(r.colegioId, r.idx, r.servicio)}</td>
+                                <td style={{ padding: '2px 4px', textAlign: 'center' }}>
+                                  <input type="checkbox" checked={!!r.servicio.reqViaje} disabled={real} aria-label="Requiere viaje"
+                                    title={real ? 'Servicio ya realizado' : 'Requiere transporte: aparece en Logística (pre-marca traslado en Rentabilidad)'}
+                                    onChange={(e) => marcarViaje(r.colegioId, r.idx, { reqViaje: e.target.checked })} />
+                                </td>
+                                <td style={{ padding: '2px 4px', textAlign: 'center' }}>
+                                  <input type="checkbox" checked={!!r.servicio.reqHospedaje} disabled={real} aria-label="Requiere hospedaje"
+                                    title={real ? 'Servicio ya realizado' : 'Requiere hospedaje: aparece en Logística'}
+                                    onChange={(e) => marcarViaje(r.colegioId, r.idx, { reqHospedaje: e.target.checked })} />
+                                </td>
                                 <td style={{ padding: '2px 4px', textAlign: 'center' }}>{btnNota(r.colegioId, r.idx, r.servicio)}</td>
                               </tr>
-                              {notaRow(r.colegioId, r.idx, r.servicio, 8)}
+                              {notaRow(r.colegioId, r.idx, r.servicio, 10)}
                             </Fragment>
                           )
                         })}
                       </tbody>
                     </table>
-                  )
+                    <div className="hint">✈️/🏨: la responsable logística marca qué servicios agendados necesitan transporte u hospedaje;
+                      aparecen en <b>Logística</b> para que la responsable de viajes cargue las reservas. Marcar viaje pre-marca «traslado» en Rentabilidad.</div>
+                  </>)
                 })()
               )}
             </>)}

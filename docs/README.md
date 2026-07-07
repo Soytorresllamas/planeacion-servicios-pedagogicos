@@ -13,7 +13,10 @@ la **lógica** (fórmulas / flujo de datos), **qué puedes cambiar con seguridad
 | [`01-modelo-y-simulador.md`](01-modelo-y-simulador.md) | El cálculo central (`model.ts`): coberturas, capacidad de asesores, retención/conquista y **costos**. Es la fuente única de verdad y la lógica más delicada. |
 | [`03-servicios-streamgraph.md`](03-servicios-streamgraph.md) | La vista "Servicios" (streamgraph): perfiles de servicio, curvas y cómo se alinea con el simulador. |
 | [`04-infraestructura.md`](04-infraestructura.md) | Persistencia (Supabase), gate de contraseña, y despliegue (CI/GitHub Pages), con los aprendizajes de incidentes. |
-| [`05-planeacion-servicios.md`](05-planeacion-servicios.md) | **Diseño** de las hojas de asesores (planeación operativa por asesor: cupos, asignación manual, avance por colegio). Pendiente de implementar. |
+| [`05-planeacion-servicios.md`](05-planeacion-servicios.md) | Hojas de asesores: cupos, asignación, agenda, alertas, niveles, talleres extra, contacto y enlace del director. |
+| [`06-rentabilidad.md`](06-rentabilidad.md) | Rentabilidad: valor real vs costos capturados, hoja logística y carga masiva de colegios (BI). |
+| [`07-administracion-usuarios.md`](07-administracion-usuarios.md) | Administración y seguridad: Auth + RLS por rol, altas con contraseña temporal, respaldos diarios, vista pública del director. |
+| [`08-logistica-viajes.md`](08-logistica-viajes.md) | **Logística de viajes**: checks de viaje/hospedaje por servicio agendado, sección `/logistica`, PDFs de reservas en Storage y rol «Responsable de Viajes». |
 
 ## Reglas de oro (aplican a todo el proyecto)
 

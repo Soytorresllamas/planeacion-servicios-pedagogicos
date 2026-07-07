@@ -35,7 +35,7 @@ Cubre: simular capacidad/costos, planear y ejecutar servicios por colegio, medir
 - **Vite + React + TypeScript** (strict), **HashRouter** (rutas con `#/`), **Recharts**, **Vitest**, ESLint flat.
 - **Supabase** para datos + **Auth** (identidad) + **RLS** (autorización). Cliente en `src/lib/supabase.ts`.
 - **GitHub Actions**: gate (lint+typecheck+test) → build → deploy a **GitHub Pages** en cada push a `main`.
-- **Rutas** (`src/App.tsx`, lazy con `lazyConReintento`): `/simulador`, `/planeacion`, `/rentabilidad`, `/administracion`, `/mi-hoja` (portal asesor), `/mis-colegios` (portal ejecutivo), `/vista-director/:id` (vista previa interna), `/servicios` y `/documentos` (ocultas, solo admin). **Fuera del login**: `#/director/<token>` (vista pública del director, resuelta en `main.tsx` antes del gate; en dev existe `#/director/demo`).
+- **Rutas** (`src/App.tsx`, lazy con `lazyConReintento`): `/simulador`, `/planeacion`, `/rentabilidad`, `/logistica`, `/administracion`, `/mi-hoja` (portal asesor), `/mis-colegios` (portal ejecutivo), `/vista-director/:id` (vista previa interna), `/servicios` y `/documentos` (ocultas, solo admin). **Fuera del login**: `#/director/<token>` (vista pública del director, resuelta en `main.tsx` antes del gate; en dev existe `#/director/demo`).
 - **Diseño**: sistema propio en `src/index.css` (variables CSS). Fuentes Newsreader (serif) + Hanken Grotesk (sans). Invariante de color: SMART=azul, CORE=teal, **nunca rojo en datos** (excepción documentada: gráfica 2 del Simulador). Componentes UI en `src/ui/` (NumberTicker, Seg animado, Toaster, Skeleton, ProgressRing).
 
 ### Comandos
@@ -92,7 +92,8 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 - **Vista del director** (`Director.tsx` + `VistaDirectorPreview.tsx`): pantalla de avance para el CLIENTE FINAL. Coordinación genera por colegio un enlace `#/director/<token>` (32 hex, revocable/regenerable desde la tarjeta del colegio). El director la abre SIN cuenta: `main.tsx` la resuelve antes del gate y consulta el RPC público `psp_vista_director(token)` (security definer). **Nunca viajan** tier, costos, notas internas, satisfacción ni valor (forma definida por `datosDirector`/`normalizarDirector` en `data/planeacion.ts` y espejada en el SQL).
 - **Rentabilidad** (`Rentabilidad.tsx`): valor real vs costos (traslados + externos). Hoja logística para la **Responsable Logística** (captura costos, filtros por asesor/colegio/gerencia). Ejecutor derivado: didácticas siempre externas; uso/prof según asignación.
 - **Administración** (`Administracion.tsx`, solo admin): Colegios (carga masiva XLS/CSV de BI + valor del colegio), Catálogos (gerencias, ejecutivos comerciales), Usuarios (alta/rol/activo/recuperación), Uso (mapeo de ingresos), Respaldos.
-- **5 roles** (`src/lib/sesion.ts`): **admin** (todo), **coordinador** y **logistica** (Planeación+Rentabilidad+vistas previas), **asesor** (solo su hoja), **ejecutivo** (solo `/mis-colegios`, lectura; ligado por `psp_usuarios.ejecutivo` = su nombre en «Ejecutivo Responsable»).
+- **Logística** (`Logistica.tsx`, `/logistica`, V3.2): consolidado de servicios agendados con **✈️ viaje / 🏨 hospedaje** (los marca logística en Planeación → agenda; marcar viaje pre-marca `traslado` en Rentabilidad). El rol **viajes** carga los PDFs de reservas (transporte y hotel, por separado) a **Supabase Storage** (bucket privado `psp-reservas`; capa en `lib/reservasStore.ts`); el asesor los abre desde su portal. Ver `docs/08-logistica-viajes.md`.
+- **6 roles** (`src/lib/sesion.ts`): **admin** (todo), **coordinador** y **logistica** (Planeación+Rentabilidad+Logística+vistas previas), **asesor** (solo su hoja), **ejecutivo** (solo `/mis-colegios`, lectura; ligado por `psp_usuarios.ejecutivo` = su nombre en «Ejecutivo Responsable»), **viajes** (solo `/logistica`; único que carga reservas junto con admin).
 
 ### Carga masiva de colegios (archivo de BI)
 - Plantilla oficial: `public/plantilla-colegios.xlsx` (genera `scripts/plantilla-colegios.mjs`), descargable desde la app. Parser en `src/lib/importColegios.ts`.
@@ -106,9 +107,9 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 **Hecho:** V3 completa, blindada (Auth+RLS), respaldos diarios, favicon, y el fix de recarga por caché de deploy. Backend **pristino** listo para datos reales. CI verde. ~91 pruebas.
 
 **Pendientes / próximos pasos:**
-0. ⚠ **Correr `supabase_actualizacion_v3_1.sql`** en el SQL Editor del dashboard (rol
-   «ejecutivo» + RPC `psp_vista_director`). Hasta entonces: no se pueden crear usuarios
-   ejecutivos (falla el CHECK de rol) y los enlaces del director muestran «no activo».
+0. ⚠ **Correr `supabase_actualizacion_v3_2.sql`** en el SQL Editor del dashboard (rol
+   «viajes» + bucket `psp-reservas` con RLS). Hasta entonces: no se pueden crear usuarios
+   de viajes ni subir/abrir PDFs de reservas. (El v3_1 ya está corrido y verificado.)
 1. **Cargar el catálogo real de BI** cuando lo entreguen (activa rentabilidad con valores
    reales). La plantilla ya pide niveles y contacto del colegio.
 2. **Dar de alta al equipo** (coordinación, logística, asesores) desde Administración → Usuarios.
@@ -122,6 +123,6 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 
 ## 7 · Documentación detallada
 
-- `docs/01-modelo-y-simulador.md` · `docs/05-planeacion-servicios.md` · `docs/06-rentabilidad.md` · `docs/07-administracion-usuarios.md` (seguridad + respaldos) · `docs/04-infraestructura.md`
+- `docs/01-modelo-y-simulador.md` · `docs/05-planeacion-servicios.md` · `docs/06-rentabilidad.md` · `docs/07-administracion-usuarios.md` (seguridad + respaldos) · `docs/08-logistica-viajes.md` · `docs/04-infraestructura.md`
 - `PRESENTACION.md` — panorama divulgativo (base para presentaciones).
-- `supabase_setup.sql` (tablas base) + `supabase_blindaje.sql` (Auth + RLS; correr **después** del setup) + `supabase_actualizacion_v3_1.sql` (rol ejecutivo + vista pública del director; correr al final).
+- `supabase_setup.sql` (tablas base) + `supabase_blindaje.sql` (Auth + RLS; correr **después** del setup) + `supabase_actualizacion_v3_1.sql` (rol ejecutivo + vista pública del director) + `supabase_actualizacion_v3_2.sql` (rol viajes + bucket de reservas; correr al final).

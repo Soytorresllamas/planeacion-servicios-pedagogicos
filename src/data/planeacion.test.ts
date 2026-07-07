@@ -8,6 +8,7 @@ import {
   agregarAlerta, atenderAlerta,
   nivelesDeColegio, agregarServicioExtra, quitarServicioExtra,
   genTokenDirector, datosDirector, normalizarDirector, colegiosDeEjecutivo, normNombre,
+  marcarNecesidadViaje, filasViajes, estadoReserva, resumenViajes,
 } from './planeacion';
 import type { Servicio, Colegio } from './planeacion';
 
@@ -373,6 +374,65 @@ describe('enlace y vista del director', () => {
     expect(d.servicios[0]).toEqual({ tipo: 'prof', estatus: 'agendado', fechaPlan: '2026-09-10', fechaReal: undefined, nivel: undefined, extra: undefined });
     expect(normalizarDirector(null)).toBeNull();        // token inválido → RPC devuelve null
     expect(normalizarDirector({ nombre: 'x' })).toBeNull();
+  });
+});
+
+describe('logística de viajes', () => {
+  const base = () => generateColegios(10, DEFAULTS.tiersSmart, 0, DEFAULTS.tiersCore);
+  const ID = 'SMART-top-001';
+
+  it('marcarNecesidadViaje: marcar viaje pre-marca traslado (Rentabilidad); hospedaje no', () => {
+    let cols = marcarNecesidadViaje(base(), ID, 0, { reqViaje: true });
+    let s = cols.find((c) => c.id === ID)!.servicios[0];
+    expect(s.reqViaje).toBe(true);
+    expect(s.traslado).toBe(true);           // un dato, dos usos
+    cols = marcarNecesidadViaje(cols, ID, 1, { reqHospedaje: true });
+    s = cols.find((c) => c.id === ID)!.servicios[1];
+    expect(s.reqHospedaje).toBe(true);
+    expect(s.traslado).toBeUndefined();      // hospedaje no implica traslado
+    // desmarcar viaje NO quita traslado (el costo real puede existir igual)
+    cols = marcarNecesidadViaje(cols, ID, 0, { reqViaje: false });
+    s = cols.find((c) => c.id === ID)!.servicios[0];
+    expect(s.reqViaje).toBe(false);
+    expect(s.traslado).toBe(true);
+  });
+
+  it('filasViajes junta solo servicios con necesidad, ordenados por fecha (sin fecha al final)', () => {
+    let cols = marcarNecesidadViaje(base(), ID, 0, { reqViaje: true });
+    cols = marcarNecesidadViaje(cols, ID, 1, { reqHospedaje: true });
+    cols = setServicio(cols, ID, 1, { fechaPlan: '2026-09-01' });
+    const filas = filasViajes(cols);
+    expect(filas).toHaveLength(2);
+    expect(filas[0].idx).toBe(1);            // con fecha primero
+    expect(filas[1].idx).toBe(0);            // sin fecha al final
+    expect(filasViajes(base())).toHaveLength(0);
+  });
+
+  it('estadoReserva exige un PDF por cada necesidad marcada', () => {
+    expect(estadoReserva({ tipo: 'uso', estatus: 'agendado' })).toBe('completa'); // sin necesidades
+    expect(estadoReserva({ tipo: 'uso', estatus: 'agendado', reqViaje: true })).toBe('pendiente');
+    expect(estadoReserva({ tipo: 'uso', estatus: 'agendado', reqViaje: true, pdfTransporte: 'r/t.pdf' })).toBe('completa');
+    expect(estadoReserva({ tipo: 'uso', estatus: 'agendado', reqViaje: true, reqHospedaje: true, pdfTransporte: 'r/t.pdf' })).toBe('parcial');
+    expect(estadoReserva({ tipo: 'uso', estatus: 'agendado', reqViaje: true, reqHospedaje: true, pdfTransporte: 'r/t.pdf', pdfHotel: 'r/h.pdf' })).toBe('completa');
+  });
+
+  it('resumenViajes cuenta pendientes, próximos 7 días y completas (ignora realizados)', () => {
+    const hoy = '2026-10-15';
+    let cols = marcarNecesidadViaje(base(), ID, 0, { reqViaje: true });          // pendiente, próx (2026-10-18)
+    cols = setServicio(cols, ID, 0, { estatus: 'agendado', fechaPlan: '2026-10-18' });
+    cols = marcarNecesidadViaje(cols, ID, 1, { reqHospedaje: true });            // completa (con PDF), lejana
+    cols = setServicio(cols, ID, 1, { estatus: 'agendado', fechaPlan: '2026-12-01', pdfHotel: 'r/h.pdf' });
+    cols = marcarNecesidadViaje(cols, ID, 2, { reqViaje: true });                // realizado → fuera
+    cols = setServicio(cols, ID, 2, { estatus: 'realizado' });
+    const r = resumenViajes(cols, hoy);
+    expect(r).toEqual({ filas: 2, pendientes: 1, proximos7: 1, completas: 1 });
+  });
+
+  it('los campos de viaje NUNCA llegan a la vista del director', () => {
+    const cols = marcarNecesidadViaje(base(), ID, 0, { reqViaje: true, reqHospedaje: true });
+    const conPdf = setServicio(cols, ID, 0, { pdfTransporte: 'reservas/t.pdf', pdfHotel: 'reservas/h.pdf' });
+    const d = datosDirector(conPdf.find((c) => c.id === ID)!, null);
+    expect(JSON.stringify(d)).not.toMatch(/reqViaje|reqHospedaje|pdf|reservas/);
   });
 });
 

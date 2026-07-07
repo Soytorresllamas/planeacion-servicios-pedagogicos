@@ -35,6 +35,7 @@ const lazyConReintento = (importar: () => Promise<{ default: ComponentType }>, c
 const Simulador = lazyConReintento(() => import('./pages/Simulador.tsx'), 'simulador')
 const Planeacion = lazyConReintento(() => import('./pages/Planeacion.tsx'), 'planeacion')
 const Rentabilidad = lazyConReintento(() => import('./pages/Rentabilidad.tsx'), 'rentabilidad')
+const Logistica = lazyConReintento(() => import('./pages/Logistica.tsx'), 'logistica')
 const Administracion = lazyConReintento(() => import('./pages/Administracion.tsx'), 'administracion')
 const Streamgraph = lazyConReintento(() => import('./pages/Streamgraph.tsx'), 'servicios')
 const Documentos = lazyConReintento(() => import('./pages/Documentos.tsx'), 'documentos')
@@ -82,6 +83,7 @@ export default function App() {
             <Route path="/simulador" element={g('/simulador', <Simulador />)} />
             <Route path="/planeacion" element={g('/planeacion', <Planeacion />)} />
             <Route path="/rentabilidad" element={g('/rentabilidad', <Rentabilidad />)} />
+            <Route path="/logistica" element={g('/logistica', <Logistica />)} />
             <Route path="/administracion" element={g('/administracion', <Administracion />)} />
             {/* rutas fuera del menú (solo admin) */}
             <Route path="/servicios" element={g('/servicios', <Streamgraph />)} />

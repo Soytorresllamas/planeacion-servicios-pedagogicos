@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react'
 import { ESTATUS, SATISFACCION, SERIES, INGLES, NIVELES, NIVEL_LABEL, urgencia, nivelesDeColegio, genTokenDirector } from '../../data/planeacion'
 import type { Colegio, Servicio, Estatus, Urgencia, ServTipo, NivelKey, ContactoColegio } from '../../data/planeacion'
 import { SMART, CORE, EST_LABEL, SERV_LABEL, URG_BG, tierLabel, segColor } from './colors'
+import { urlReserva } from '../../lib/reservasStore'
 import { toast } from '../../ui/toastBus'
 
 // ─── UI compartida de la planeación (portal del asesor + hoja del coordinador) ───
@@ -75,6 +76,13 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
     if (!urlDirector) return
     void navigator.clipboard?.writeText(urlDirector)
     toast('Enlace del director copiado', 'ok')
+  }
+
+  // abre el PDF de una reserva (URL firmada de Storage)
+  const abrirReserva = async (path: string) => {
+    const url = await urlReserva(path)
+    if (url) window.open(url, '_blank', 'noopener')
+    else toast('No se pudo abrir la reserva; inténtalo de nuevo', 'err')
   }
   const meta = (<>
     {sat && <span title={sat.label} style={{ fontSize: 15, flex: '0 0 auto' }}>{sat.emoji}</span>}
@@ -173,6 +181,25 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
                 )}
                 {notaKey !== i && s.nota && (
                   <div onClick={() => setNotaKey(i)} title="Clic para editar" style={{ fontSize: 11, color: 'var(--mut)', fontStyle: 'italic', cursor: 'pointer', marginTop: 3, paddingLeft: 28 }}>“{s.nota}”</div>
+                )}
+                {/* reservas de viaje/hospedaje (módulo Logística): el asesor abre sus PDFs aquí */}
+                {(s.reqViaje || s.reqHospedaje || s.pdfTransporte || s.pdfHotel) && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 3, paddingLeft: 28 }}>
+                    {(s.reqViaje || s.pdfTransporte) && (s.pdfTransporte ? (
+                      <button className="sec" style={{ fontSize: 11, padding: '3px 9px' }} title="Abrir el PDF de tu reserva de transporte"
+                        onClick={() => void abrirReserva(s.pdfTransporte!)}>🎫 Transporte</button>
+                    ) : (
+                      <span title="Requiere transporte; la reserva está en trámite"
+                        style={{ fontSize: 10, fontWeight: 700, color: '#8A6D1C', background: 'var(--gold-wash)', borderRadius: 8, padding: '2px 8px' }}>✈️ Viaje en trámite</span>
+                    ))}
+                    {(s.reqHospedaje || s.pdfHotel) && (s.pdfHotel ? (
+                      <button className="sec" style={{ fontSize: 11, padding: '3px 9px' }} title="Abrir el PDF de tu reserva de hotel"
+                        onClick={() => void abrirReserva(s.pdfHotel!)}>🏨 Hotel</button>
+                    ) : (
+                      <span title="Requiere hospedaje; la reserva está en trámite"
+                        style={{ fontSize: 10, fontWeight: 700, color: '#8A6D1C', background: 'var(--gold-wash)', borderRadius: 8, padding: '2px 8px' }}>🏨 Hospedaje en trámite</span>
+                    ))}
+                  </div>
                 )}
               </Fragment>
             )

@@ -37,6 +37,7 @@ export const tabsPorRol = (rol: Rol): { to: string; label: string }[] => {
         { to: '/simulador', label: 'Simulador' },
         { to: '/planeacion', label: 'Planeación' },
         { to: '/rentabilidad', label: 'Rentabilidad' },
+        { to: '/logistica', label: 'Logística' },
         { to: '/administracion', label: 'Administración' },
       ];
     case 'coordinador':
@@ -44,7 +45,10 @@ export const tabsPorRol = (rol: Rol): { to: string; label: string }[] => {
       return [
         { to: '/planeacion', label: 'Planeación' },
         { to: '/rentabilidad', label: 'Rentabilidad' },
+        { to: '/logistica', label: 'Logística' },
       ];
+    case 'viajes':
+      return [{ to: '/logistica', label: 'Logística' }];
     case 'asesor':
     case 'ejecutivo':
       return [];
@@ -55,15 +59,17 @@ export const tabsPorRol = (rol: Rol): { to: string; label: string }[] => {
 export const rutaInicial = (rol: Rol): string =>
   rol === 'asesor' ? '/mi-hoja'
     : rol === 'ejecutivo' ? '/mis-colegios'
+    : rol === 'viajes' ? '/logistica'
     : rol === 'logistica' ? '/rentabilidad' : '/planeacion';
 
 /** ¿El rol puede ver esta ruta? Los portales (mi-hoja del asesor, mis-colegios del
  *  ejecutivo) y la vista del director los ven también coordinación/logística como
- *  vista previa; el asesor y el ejecutivo SOLO ven el suyo. */
+ *  vista previa; asesor, ejecutivo y viajes SOLO ven lo suyo. */
 export const rutaPermitida = (rol: Rol, path: string): boolean => {
   if (rol === 'admin') return true;
   if (rol === 'asesor') return path === '/mi-hoja';
   if (rol === 'ejecutivo') return path === '/mis-colegios';
+  if (rol === 'viajes') return path === '/logistica';
   // coordinador y logística: sus pestañas + vistas previas de portales y director
-  return ['/planeacion', '/rentabilidad', '/mi-hoja', '/mis-colegios', '/vista-director'].includes(path);
+  return ['/planeacion', '/rentabilidad', '/logistica', '/mi-hoja', '/mis-colegios', '/vista-director'].includes(path);
 };

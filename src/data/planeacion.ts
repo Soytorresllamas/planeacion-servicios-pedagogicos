@@ -41,6 +41,11 @@ export interface Servicio {
   nota?: string;
   nivel?: NivelKey;     // nivel escolar que atiende este servicio (opcional)
   extra?: boolean;      // taller agregado por coordinación FUERA de la matriz del tipo
+  // ── logística de viajes (módulo Logística; ver docs/08-logistica-viajes.md) ──
+  reqViaje?: boolean;      // requiere transporte (lo marca logística en la agenda)
+  reqHospedaje?: boolean;  // requiere hospedaje
+  pdfTransporte?: string;  // path en Storage del PDF de la reserva de transporte
+  pdfHotel?: string;       // path en Storage del PDF de la reserva de hotel
   // ── captura logística (módulo Rentabilidad; la llena la Responsable Logística) ──
   traslado?: boolean;       // el servicio requirió traslado/viáticos
   costoTraslado?: number;   // MXN; solo tiene sentido si traslado
@@ -261,6 +266,62 @@ export function agregarServicioExtra(colegios: Colegio[], colegioId: string, tip
 export function quitarServicioExtra(colegios: Colegio[], colegioId: string, idx: number): Colegio[] {
   return colegios.map((c) => c.id !== colegioId ? c
     : { ...c, servicios: c.servicios.filter((s, i) => i !== idx || !s.extra) });
+}
+
+// ── Logística de viajes (sección Logística) ───────────────────────────────────
+
+/** Marca/desmarca la necesidad de viaje u hospedaje de un servicio.
+ *  Marcar VIAJE pre-marca `traslado` (captura de costos de Rentabilidad): un solo
+ *  dato, dos usos — después solo faltará capturar el monto. Desmarcar viaje NO
+ *  quita `traslado` (puede haber costo real aunque la reserva se cancele). */
+export function marcarNecesidadViaje(
+  colegios: Colegio[], colegioId: string, idx: number,
+  patch: { reqViaje?: boolean; reqHospedaje?: boolean },
+): Colegio[] {
+  const extendido: Partial<Servicio> = { ...patch };
+  if (patch.reqViaje) extendido.traslado = true;
+  return setServicio(colegios, colegioId, idx, extendido);
+}
+
+/** Una fila de la tabla de Logística: servicio con necesidad de viaje/hospedaje. */
+export interface FilaViaje {
+  colegio: Colegio;
+  idx: number;          // índice del servicio dentro del colegio (para setServicio)
+  servicio: Servicio;
+}
+
+/** Servicios con necesidad de viaje u hospedaje (cualquier estatus; la UI filtra).
+ *  Ordenados por fecha planeada (los sin fecha al final). */
+export function filasViajes(colegios: Colegio[]): FilaViaje[] {
+  const out: FilaViaje[] = [];
+  for (const c of colegios) {
+    c.servicios.forEach((s, idx) => { if (s.reqViaje || s.reqHospedaje) out.push({ colegio: c, idx, servicio: s }); });
+  }
+  return out.sort((a, b) => (a.servicio.fechaPlan ?? '9999').localeCompare(b.servicio.fechaPlan ?? '9999'));
+}
+
+export type EstadoReserva = 'completa' | 'parcial' | 'pendiente';
+/** Estado de las reservas de un servicio: cada necesidad marcada exige su PDF. */
+export function estadoReserva(s: Servicio): EstadoReserva {
+  const faltan = (s.reqViaje && !s.pdfTransporte ? 1 : 0) + (s.reqHospedaje && !s.pdfHotel ? 1 : 0);
+  const total = (s.reqViaje ? 1 : 0) + (s.reqHospedaje ? 1 : 0);
+  if (total === 0 || faltan === 0) return 'completa';
+  return faltan === total ? 'pendiente' : 'parcial';
+}
+
+export interface ResumenViajes { filas: number; pendientes: number; proximos7: number; completas: number; }
+/** KPIs de la sección Logística (sobre servicios NO realizados). */
+export function resumenViajes(colegios: Colegio[], hoy: string): ResumenViajes {
+  let filas = 0, pendientes = 0, proximos7 = 0, completas = 0;
+  const limite = sumarDias(hoy, 7);
+  for (const { servicio: s } of filasViajes(colegios)) {
+    if (s.estatus === 'realizado') continue;
+    filas++;
+    const est = estadoReserva(s);
+    if (est === 'completa') completas++; else pendientes++;
+    if (s.fechaPlan && s.fechaPlan >= hoy && s.fechaPlan <= limite) proximos7++;
+  }
+  return { filas, pendientes, proximos7, completas };
 }
 
 // ── Enlace público del director (pantalla de avance por colegio) ──────────────
