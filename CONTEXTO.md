@@ -37,6 +37,7 @@ Cubre: simular capacidad/costos, planear y ejecutar servicios por colegio, medir
 - **GitHub Actions**: gate (lint+typecheck+test) → build → deploy a **GitHub Pages** en cada push a `main`.
 - **Rutas** (`src/App.tsx`, lazy con `lazyConReintento`): `/simulador`, `/planeacion`, `/rentabilidad`, `/logistica`, `/administracion`, `/mi-hoja` (portal asesor), `/mis-colegios` (portal ejecutivo), `/vista-director/:id` (vista previa interna), `/servicios` y `/documentos` (ocultas, solo admin). **Fuera del login**: `#/director/<token>` (vista pública del director, resuelta en `main.tsx` antes del gate; en dev existe `#/director/demo`).
 - **Diseño**: sistema propio en `src/index.css` (variables CSS). Fuentes Newsreader (serif) + Hanken Grotesk (sans). Invariante de color: SMART=azul, CORE=teal, **nunca rojo en datos** (excepción documentada: gráfica 2 del Simulador). Componentes UI en `src/ui/` (NumberTicker, Seg animado, Toaster, Skeleton, ProgressRing).
+- **Tipografía responsiva por tokens** (`--fs-badge/caption/meta/body/title/input` en `index.css`): escritorio conserva la densidad (9-13px); en **≤560px** suben al piso accesible (10.5-16px; `--fs-input`=16px evita el auto-zoom de iOS). Al agregar texto en superficies móviles usa `fontSize: 'var(--fs-*)'`, no px sueltos. Arnés visual sin login: `#/dev-card` (solo DEV, `src/dev/DevColegioCard.tsx`).
 
 ### Comandos
 ```bash

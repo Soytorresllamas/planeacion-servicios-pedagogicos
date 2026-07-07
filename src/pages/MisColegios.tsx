@@ -98,11 +98,11 @@ export default function MisColegios() {
             <img src={logoSM} alt="SM México" className="brand-logo" />
             <span className="brand-txt">Portal del ejecutivo comercial<small>Servicios pedagógicos 2026-2027</small></span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--mut)', marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--fs-body)', color: 'var(--mut)', marginLeft: 'auto' }}>
             {esPreview && (<>
               <a className="sec" href="#/planeacion" style={{ textDecoration: 'none' }}>← Volver</a>
               <select value={nombreEjecutivo} aria-label="Vista previa: ejecutivo" title="Vista previa: elige el ejecutivo"
-                onChange={(e) => setPreviewNombre(e.target.value)} style={{ width: 'auto', fontSize: 12 }}>
+                onChange={(e) => setPreviewNombre(e.target.value)} style={{ width: 'auto', fontSize: 'var(--fs-body)' }}>
                 {ejecutivosConCartera.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </>)}
@@ -136,13 +136,13 @@ export default function MisColegios() {
             <div className="panel">
               <h3>🚨 Reportes de caso crítico</h3>
               {alertasMias.slice(0, 8).map((a) => (
-                <div key={a.id} style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', padding: '6px 0', borderBottom: '1px solid var(--line)', fontSize: 12.5 }}>
-                  <span style={{ color: 'var(--mut)', width: 44, flex: '0 0 auto', fontSize: 11 }}>{fmtCorta(a.fecha.slice(0, 10))}</span>
+                <div key={a.id} style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', padding: '6px 0', borderBottom: '1px solid var(--line)', fontSize: 'var(--fs-body)' }}>
+                  <span style={{ color: 'var(--mut)', width: 44, flex: '0 0 auto', fontSize: 'var(--fs-meta)' }}>{fmtCorta(a.fecha.slice(0, 10))}</span>
                   <b style={{ flex: '0 0 auto' }}>{nombreColegio(a.colegioId)}</b>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 8px', flex: '0 0 auto' }}>
+                  <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 8px', flex: '0 0 auto' }}>
                     {PROBLEMAS.find((p) => p.key === a.tipo)?.label ?? a.tipo}</span>
                   <span style={{ flex: '1 1 200px', minWidth: 0, color: 'var(--ink-2)' }}>{a.descripcion}</span>
-                  <span style={{ flex: '0 0 auto', fontSize: 11, fontWeight: 700, color: a.atendida ? 'var(--green)' : 'var(--gold)' }}>
+                  <span style={{ flex: '0 0 auto', fontSize: 'var(--fs-meta)', fontWeight: 700, color: a.atendida ? 'var(--green)' : 'var(--gold)' }}>
                     {a.atendida ? '✓ Atendido' : 'Abierto'}</span>
                 </div>
               ))}
@@ -154,7 +154,7 @@ export default function MisColegios() {
           <h2 style={{ marginTop: 18 }}>Tus colegios</h2>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', margin: '6px 0 10px' }}>
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔍 Buscar colegio…"
-              aria-label="Buscar colegio" style={{ flex: '1 1 180px', minWidth: 150, fontSize: 13, padding: '7px 10px' }} />
+              aria-label="Buscar colegio" style={{ flex: '1 1 180px', minWidth: 150, fontSize: 'var(--fs-input)', padding: '7px 10px' }} />
             {busca && <button className="sec" onClick={() => setBusca('')}>× Limpiar</button>}
           </div>
 
@@ -174,12 +174,14 @@ export default function MisColegios() {
                 <div key={c.id} className="card-in panel" style={{ ['--i' as string]: Math.min(idxV, 8), margin: 0 }}>
                   <button type="button" onClick={() => toggle(c.id)} aria-expanded={abierto}
                     style={{ display: 'flex', gap: 7, alignItems: 'center', cursor: 'pointer', width: '100%', minHeight: 32, textAlign: 'left', background: 'transparent', border: 'none', padding: 0, font: 'inherit', color: 'inherit' }}>
-                    <span aria-hidden style={{ fontSize: 11, color: 'var(--mut)', width: 12, flex: '0 0 auto' }}>{abierto ? '▾' : '▸'}</span>
+                    <span aria-hidden className={`card-chev${abierto ? ' abierto' : ''}`}>
+                      <svg viewBox="0 0 16 16" fill="none"><path d="M6 3.5 11 8l-5 4.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </span>
                     <span aria-hidden style={{ width: 9, height: 9, borderRadius: 9, flex: '0 0 auto', background: c.campaign === 'SMART' ? SMART : CORE }} />
-                    <b style={{ flex: 1, minWidth: 0, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nombre}</b>
+                    <b style={{ flex: 1, minWidth: 0, fontSize: 'var(--fs-title)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nombre}</b>
                     {sat && <span title={`Satisfacción: ${sat.label}`} style={{ fontSize: 15, flex: '0 0 auto' }}>{sat.emoji}</span>}
-                    {comentarios.length > 0 && <span title={`${comentarios.length} comentarios del asesor`} style={{ fontSize: 10, fontWeight: 700, color: 'var(--smart)', background: '#EAF1F9', borderRadius: 8, padding: '1px 7px', flex: '0 0 auto' }}>💬 {comentarios.length}</span>}
-                    {vencidos > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 7px', flex: '0 0 auto' }}>{vencidos} vencido{vencidos > 1 ? 's' : ''}</span>}
+                    {comentarios.length > 0 && <span title={`${comentarios.length} comentarios del asesor`} style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: 'var(--smart)', background: '#EAF1F9', borderRadius: 8, padding: '1px 7px', flex: '0 0 auto' }}>💬 {comentarios.length}</span>}
+                    {vencidos > 0 && <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 7px', flex: '0 0 auto' }}>{vencidos} vencido{vencidos > 1 ? 's' : ''}</span>}
                   </button>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '7px 0 2px' }}>
@@ -188,9 +190,9 @@ export default function MisColegios() {
                         <span key={i} title={`${SERV_LABEL[s.tipo]}`} style={{ flex: 1, height: 7, borderRadius: 2, background: segColor(s, hoy) }} />
                       ))}
                     </div>
-                    <span style={{ fontSize: 11, color: 'var(--mut)', flex: '0 0 auto', whiteSpace: 'nowrap', fontWeight: 600 }}>{done}/{c.servicios.length} sesiones</span>
+                    <span style={{ fontSize: 'var(--fs-meta)', color: 'var(--mut)', flex: '0 0 auto', whiteSpace: 'nowrap', fontWeight: 600 }}>{done}/{c.servicios.length} sesiones</span>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--mut)', display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 3 }}>
+                  <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--mut)', display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 3 }}>
                     <span>Asesor: <b style={{ color: 'var(--ink-2)' }}>{nombreAsesor(c.asesorId)}</b></span>
                     {proxima && <span>Próxima sesión: <b style={{ color: 'var(--ink-2)' }}>{fmtCorta(proxima.fechaPlan!)}</b></span>}
                     {niveles.length > 0 && <span>{niveles.map((k) => NIVEL_LABEL[k]).join(' · ')}</span>}
@@ -199,7 +201,7 @@ export default function MisColegios() {
                   {abierto && (<>
                     {/* contacto para coordinarse con el colegio */}
                     {c.contacto && (c.contacto.nombre || c.contacto.telefono || c.contacto.correo) && (
-                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'baseline', marginTop: 10, padding: '8px 10px', background: 'var(--panel-bg)', borderRadius: 8, fontSize: 12 }}>
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'baseline', marginTop: 10, padding: '8px 10px', background: 'var(--panel-bg)', borderRadius: 8, fontSize: 'var(--fs-body)' }}>
                         <span aria-hidden>📇</span>
                         <b>{c.contacto.nombre ?? 'Contacto'}</b>
                         {c.contacto.rol && <span style={{ color: 'var(--mut)' }}>{c.contacto.rol}</span>}
@@ -210,35 +212,35 @@ export default function MisColegios() {
 
                     {/* énfasis: comentarios y reportes del asesor */}
                     <div style={{ marginTop: 10 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--mut)', marginBottom: 6 }}>💬 Comentarios del asesor</div>
+                      <div style={{ fontSize: 'var(--fs-meta)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--mut)', marginBottom: 6 }}>💬 Comentarios del asesor</div>
                       {comentarios.length === 0 && alertasCol.length === 0 && (
                         <div className="hint" style={{ margin: 0 }}>Sin comentarios todavía. Aparecerán conforme el asesor avance con el colegio.</div>
                       )}
                       {comentarios.map((n, i) => (
                         <div key={i} style={{ borderLeft: `2px solid var(--line-2)`, padding: '4px 10px', margin: '0 0 6px' }}>
-                          <div style={{ fontSize: 10.5, color: 'var(--mut)', fontWeight: 600 }}>{n.titulo}{n.fecha && ` · ${fmtCorta(n.fecha)}`}</div>
-                          <div style={{ fontSize: 12.5, color: 'var(--ink-2)', fontStyle: 'italic', lineHeight: 1.5 }}>“{n.texto}”</div>
+                          <div style={{ fontSize: 'var(--fs-caption)', color: 'var(--mut)', fontWeight: 600 }}>{n.titulo}{n.fecha && ` · ${fmtCorta(n.fecha)}`}</div>
+                          <div style={{ fontSize: 'var(--fs-body)', color: 'var(--ink-2)', fontStyle: 'italic', lineHeight: 1.5 }}>“{n.texto}”</div>
                         </div>
                       ))}
                       {alertasCol.map((a) => (
-                        <div key={a.id} style={{ display: 'flex', gap: 7, alignItems: 'baseline', flexWrap: 'wrap', fontSize: 12, padding: '4px 0' }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 8px' }}>🚨 {PROBLEMAS.find((p) => p.key === a.tipo)?.label ?? a.tipo}</span>
+                        <div key={a.id} style={{ display: 'flex', gap: 7, alignItems: 'baseline', flexWrap: 'wrap', fontSize: 'var(--fs-body)', padding: '4px 0' }}>
+                          <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 8px' }}>🚨 {PROBLEMAS.find((p) => p.key === a.tipo)?.label ?? a.tipo}</span>
                           <span style={{ color: 'var(--ink-2)', flex: '1 1 160px' }}>{a.descripcion}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: a.atendida ? 'var(--green)' : 'var(--gold)' }}>{a.atendida ? '✓ Atendido' : 'Abierto'}</span>
+                          <span style={{ fontSize: 'var(--fs-meta)', fontWeight: 700, color: a.atendida ? 'var(--green)' : 'var(--gold)' }}>{a.atendida ? '✓ Atendido' : 'Abierto'}</span>
                         </div>
                       ))}
                     </div>
 
                     {/* detalle de sesiones (lectura) */}
                     <div style={{ marginTop: 10 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--mut)', marginBottom: 4 }}>Sesiones</div>
+                      <div style={{ fontSize: 'var(--fs-meta)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--mut)', marginBottom: 4 }}>Sesiones</div>
                       {c.servicios.map((s, i) => {
                         const real = s.estatus === 'realizado'
                         return (
-                          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 12, padding: '4px 0', borderBottom: '1px solid var(--line)' }}>
+                          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 'var(--fs-body)', padding: '4px 0', borderBottom: '1px solid var(--line)' }}>
                             <span aria-hidden style={{ width: 8, height: 8, borderRadius: 8, flex: '0 0 auto', alignSelf: 'center', background: real ? EST_COLOR.realizado : s.estatus === 'agendado' ? EST_COLOR.agendado : 'var(--line-2)' }} />
-                            <span style={{ flex: 1, minWidth: 0, fontWeight: 600 }}>{SERV_LABEL[s.tipo]}{s.nivel && <span style={{ fontWeight: 400, color: 'var(--mut)' }}> · {NIVEL_LABEL[s.nivel]}</span>}{s.extra && <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--pur)', background: '#F1EAF4', borderRadius: 4, padding: '1px 4px', marginLeft: 4 }}>EXTRA</span>}</span>
-                            <span style={{ flex: '0 0 auto', color: 'var(--mut)', fontSize: 11 }}>
+                            <span style={{ flex: 1, minWidth: 0, fontWeight: 600 }}>{SERV_LABEL[s.tipo]}{s.nivel && <span style={{ fontWeight: 400, color: 'var(--mut)' }}> · {NIVEL_LABEL[s.nivel]}</span>}{s.extra && <span style={{ fontSize: 'var(--fs-badge)', fontWeight: 700, color: 'var(--pur)', background: '#F1EAF4', borderRadius: 4, padding: '1px 4px', marginLeft: 4 }}>EXTRA</span>}</span>
+                            <span style={{ flex: '0 0 auto', color: 'var(--mut)', fontSize: 'var(--fs-meta)' }}>
                               {real ? `Realizada${s.fechaReal ? ` · ${fmtCorta(s.fechaReal)}` : ''}`
                                 : s.fechaPlan ? `Programada · ${fmtCorta(s.fechaPlan)}` : 'Por programar'}
                             </span>

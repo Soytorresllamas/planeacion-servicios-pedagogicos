@@ -12,6 +12,19 @@
   --ease:cubic-bezier(.16,1,.3,1);
   /* legacy aliases kept for chart code */
   --navy:var(--blue); --navy-l:#9DBBDD; --amber:var(--gold); --mut-old:var(--mut);
+  /* ── Escala tipográfica por rol: escritorio denso · móvil accesible ──
+     Los componentes usan var(--fs-*) en vez de px sueltos. En escritorio valen
+     la densidad de siempre; en ≤560px suben al piso legible (Apple HIG ≥~14px
+     cuerpo, Material ≥14; --fs-input=16px evita el auto-zoom de iOS al enfocar). */
+  --fs-badge:9px;      /* chips Pre/EXT/EXTRA */
+  --fs-caption:10.5px; /* hints, leyendas, fechas chicas */
+  --fs-meta:11px;      /* metadatos, labels, encabezados de panel */
+  --fs-body:12px;      /* texto de filas, notas, comentarios */
+  --fs-title:13px;     /* nombres de colegio, títulos de fila */
+  --fs-input:13px;     /* inputs de texto */
+}
+@media(max-width:560px){
+  :root{ --fs-badge:10.5px; --fs-caption:12px; --fs-meta:12.5px; --fs-body:14px; --fs-title:15px; --fs-input:16px; }
 }
 *{box-sizing:border-box;}
 body{margin:0;font-family:"Hanken Grotesk",system-ui,sans-serif;color:var(--ink);background:var(--bg);}
@@ -29,11 +42,11 @@ a{color:inherit;text-decoration:none;}
 .page{max-width:1180px;margin:0 auto;padding:24px 22px;}
 h1{font-family:Newsreader,serif;font-weight:700;font-size:26px;letter-spacing:-.3px;margin:0 0 4px;color:var(--ink);}
 h2{font-family:Newsreader,serif;font-weight:600;font-style:italic;font-size:17px;margin:20px 0 8px;color:var(--ink);}
-.sub{color:var(--mut);font-size:12.5px;margin-bottom:16px;line-height:1.5;}
+.sub{color:var(--mut);font-size:var(--fs-body);margin-bottom:16px;line-height:1.5;}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin-bottom:12px;}
-.panel h3{font-size:11px;font-weight:700;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);}
+.panel h3{font-size:var(--fs-meta);font-weight:700;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);}
 .fld{margin-bottom:9px;}
-label{display:block;font-size:11.5px;color:var(--ink-2);margin-bottom:3px;}
+label{display:block;font-size:var(--fs-meta);color:var(--ink-2);margin-bottom:3px;}
 label .u{color:var(--faint);}
 input[type=number]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;}
 input[type=range]{width:100%;accent-color:var(--red);}
@@ -43,6 +56,14 @@ select{width:100%;padding:5px;border:1px solid var(--line);border-radius:8px;fon
 .nota-box::placeholder{color:var(--faint);}
 .nota-box:focus{outline:none;background:var(--surface);border-color:var(--smart);box-shadow:0 0 0 3px rgba(37,99,176,.12);}
 
+/* Chevrón de la tarjeta de colegio: la afordancia de expandir/colapsar debe VERSE
+   (pedido explícito). Botón circular con rotación ▸→▾; en móvil crece al tamaño táctil. */
+.card-chev{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:99px;background:var(--panel-bg);border:1px solid var(--line-2);color:var(--ink);box-sizing:border-box;flex:0 0 auto;transition:transform .22s var(--ease),background .15s ease,border-color .15s ease;}
+.card-chev svg{width:14px;height:14px;display:block;margin-left:1px;}
+.card-chev.abierto{transform:rotate(90deg);}
+button:hover .card-chev{background:var(--line);border-color:var(--mut);}
+@media(max-width:560px){.card-chev{width:40px;height:40px;}.card-chev svg{width:20px;height:20px;}}
+
 /* Fila de servicio (ColegioCard): grid de escritorio · 2 líneas en móvil.
    check·etiqueta·fecha·nivel·estatus·nota → check·etiqueta·nota / fecha·nivel·estatus.
    .c-meta usa display:contents en escritorio (transparente al grid, cero cambio
@@ -50,10 +71,17 @@ select{width:100%;padding:5px;border:1px solid var(--line);border-radius:8px;fon
 .serv-row{display:grid;grid-template-columns:20px minmax(30px,1fr) auto auto auto auto;align-items:center;gap:5px;border-bottom:1px solid var(--line);padding:4px 2px;border-radius:5px;}
 .serv-row .c-chk{transform:scale(1.4);margin:0;cursor:pointer;}
 .serv-row .c-meta{display:contents;}
-.serv-row .c-fecha input[type=date]{font-size:10.5px;padding:3px 1px;width:94px;}
-.serv-row .c-nivel{font-size:10.5px;padding:3px 0;width:auto;min-width:46px;color:var(--mut);}
+/* Controles de la fila con el lenguaje del design system (no defaults del navegador):
+   flecha propia en los selects, números tabulares y calendario suavizado en la fecha,
+   hover perceptible en los tres. */
+.serv-row .c-fecha input[type=date],.serv-row .c-nivel,.serv-row .c-estado{border:1px solid var(--line-2);border-radius:7px;background:var(--surface);color:var(--ink-2);font-family:inherit;transition:border-color .15s ease,background .15s ease;}
+.serv-row .c-fecha input[type=date]:hover,.serv-row .c-nivel:hover,.serv-row .c-estado:hover{border-color:var(--mut);}
+.serv-row .c-fecha input[type=date]{font-size:10.5px;padding:3px 4px;width:104px;font-variant-numeric:tabular-nums;}
+.serv-row .c-fecha input[type=date]::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer;}
+.serv-row .c-nivel,.serv-row .c-estado{appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%23646A75' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center;}
+.serv-row .c-nivel{font-size:10.5px;padding:3px 20px 3px 7px;width:auto;min-width:52px;color:var(--mut);}
 .serv-row .c-nivel.con-valor{color:var(--ink-2);}
-.serv-row .c-estado{font-size:11px;padding:3px 1px;width:auto;min-width:84px;}
+.serv-row .c-estado{font-size:11px;padding:3px 20px 3px 7px;width:auto;min-width:96px;}
 /* Nota: amarillo (identidad de lápiz) + objetivo táctil de 44px (guía Apple), en todo tamaño. */
 .serv-row .c-nota{border:none;background:transparent;cursor:pointer;color:var(--gold);font-size:19px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;}
 @media(max-width:560px){
@@ -62,8 +90,23 @@ select{width:100%;padding:5px;border:1px solid var(--line);border-radius:8px;fon
   .serv-row .c-label{grid-column:2;grid-row:1;}
   .serv-row .c-nota{grid-column:3;grid-row:1;}
   .serv-row .c-meta{display:flex;flex-wrap:wrap;gap:6px;grid-column:1/-1;grid-row:2;padding-left:26px;}
-  .serv-row .c-fecha input[type=date],.serv-row .c-nivel,.serv-row .c-estado{font-size:12px;padding:6px 8px;min-height:33px;box-sizing:border-box;}
-  .serv-row .c-fecha input[type=date]{width:104px;}
+  .serv-row .c-fecha input[type=date],.serv-row .c-nivel,.serv-row .c-estado{font-size:14px;min-height:38px;box-sizing:border-box;}
+  .serv-row .c-fecha input[type=date]{width:126px;padding:6px 8px;}
+  .serv-row .c-nivel,.serv-row .c-estado{padding:6px 24px 6px 9px;background-position:right 9px center;}
+}
+
+/* ── Piso tipográfico móvil para controles y clases sin token ──────────────── */
+@media(max-width:560px){
+  select{font-size:14px;padding:7px 8px;}
+  input[type=date]{font-size:14px;}
+  .nota-box,.gate-input{font-size:16px;} /* 16px: iOS no hace auto-zoom al enfocar */
+  button.sec,a.sec,label.sec{font-size:13px;padding:9px 13px;}
+  .kpi .v{font-size:24px;}
+  table{font-size:12.5px;}
+  /* vista del director: secundarios al piso legible */
+  .dir-band .ciclo,.dir-nivel,.dir-leyenda,.dir-mes,.dir-foot{font-size:12px;}
+  .dir-item .cua{font-size:12.5px;}
+  .dir-hero .prog{font-size:13px;}
 }
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
@@ -82,12 +125,12 @@ button.sec,a.sec,label.sec{background:var(--panel-bg);color:var(--ink-2);border:
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:11px 13px;}
 .kpi .v{font-family:Newsreader,serif;font-size:22px;font-weight:800;letter-spacing:-.2px;line-height:1.15;color:var(--ink);}
-.kpi .l{font-size:10.5px;font-weight:600;color:var(--mut);margin-top:3px;}
+.kpi .l{font-size:var(--fs-caption);font-weight:600;color:var(--mut);margin-top:3px;}
 .kpi.warn .v{color:var(--gold);}
 .kpi.good .v{color:var(--green);}
 .chartbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px;}
 .capnote{font-size:11px;color:var(--red);margin-top:4px;font-weight:600;}
-.hint{font-size:10.5px;color:var(--faint);margin-top:4px;}
+.hint{font-size:var(--fs-caption);color:var(--faint);margin-top:4px;}
 table{border-collapse:collapse;width:100%;font-size:11.5px;background:var(--surface);}
 th,td{border:1px solid var(--line);padding:4px 6px;text-align:right;}
 th:first-child,td:first-child{text-align:left;}

@@ -172,11 +172,11 @@ export default function HojaAsesor() {
             <img src={logoSM} alt="SM México" className="brand-logo" />
             <span className="brand-txt">Portal del asesor<small>Servicios pedagógicos 2026-2027</small></span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--mut)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--fs-body)', color: 'var(--mut)' }}>
             {esPreview && (<>
               <a className="sec" href="#/planeacion" style={{ textDecoration: 'none' }}>← Volver</a>
               <select value={asesor.id} aria-label="Vista previa: asesor" title="Vista previa: elige el asesor"
-                onChange={(e) => setPreviewId(e.target.value)} style={{ width: 'auto', fontSize: 12 }}>
+                onChange={(e) => setPreviewId(e.target.value)} style={{ width: 'auto', fontSize: 'var(--fs-body)' }}>
                 {data.asesores.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
               </select>
             </>)}
@@ -216,10 +216,10 @@ export default function HojaAsesor() {
                 const u = urgencia(r.servicio, hoy)
                 return (
                   <div key={r.colegioId + ':' + r.idx} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 4px', borderBottom: '1px solid #F0F2F5', background: URG_BG[u], borderRadius: 6 }}>
-                    <div style={{ width: 46, flex: '0 0 auto', fontWeight: 700, fontSize: 12, color: u === 'vencido' ? 'var(--gold)' : '#2C2F36' }}>{fmtF(r.servicio.fechaPlan!)}</div>
+                    <div style={{ width: 46, flex: '0 0 auto', fontWeight: 700, fontSize: 'var(--fs-body)', color: u === 'vencido' ? 'var(--gold)' : '#2C2F36' }}>{fmtF(r.servicio.fechaPlan!)}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.colegioNombre}</div>
-                      <div style={{ fontSize: 11, color: 'var(--mut)' }}><ServLabel s={r.servicio} u={u} /></div>
+                      <div style={{ fontSize: 'var(--fs-body)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.colegioNombre}</div>
+                      <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--mut)' }}><ServLabel s={r.servicio} u={u} /></div>
                     </div>
                     <button className="sec" style={{ flex: '0 0 auto', minHeight: 34 }} title="Marcar realizado hoy"
                       onClick={() => setServ(r.colegioId, r.idx, { estatus: 'realizado', fechaReal: hoy })}>✓ Hecho</button>
@@ -233,12 +233,12 @@ export default function HojaAsesor() {
             <div className="panel">
               <h3>⚠️ Requieren tu atención</h3>
               {atencion.map(({ c, venc, sinFecha, satBaja }) => (
-                <div key={c.id} style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', padding: '5px 0', borderBottom: '1px solid #F0F2F5', fontSize: 12 }}>
+                <div key={c.id} style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', padding: '5px 0', borderBottom: '1px solid #F0F2F5', fontSize: 'var(--fs-body)' }}>
                   <span style={{ width: 8, height: 8, borderRadius: 8, background: c.campaign === 'SMART' ? SMART : CORE, flex: '0 0 auto' }} />
                   <b style={{ marginRight: 2 }}>{c.nombre}</b>
-                  {venc > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 7px' }}>{venc} vencido{venc > 1 ? 's' : ''}</span>}
-                  {sinFecha > 0 && <span style={{ fontSize: 10, fontWeight: 600, color: '#4A4F58', background: '#E9ECF0', borderRadius: 8, padding: '1px 7px' }}>{sinFecha} sin agendar</span>}
-                  {satBaja && <span style={{ fontSize: 10, fontWeight: 600, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 7px' }}>satisfacción baja {SATISFACCION.find((s) => s.v === c.satisfaccion)?.emoji}</span>}
+                  {venc > 0 && <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 7px' }}>{venc} vencido{venc > 1 ? 's' : ''}</span>}
+                  {sinFecha > 0 && <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 600, color: '#4A4F58', background: '#E9ECF0', borderRadius: 8, padding: '1px 7px' }}>{sinFecha} sin agendar</span>}
+                  {satBaja && <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 600, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 7px' }}>satisfacción baja {SATISFACCION.find((s) => s.v === c.satisfaccion)?.emoji}</span>}
                 </div>
               ))}
               <div className="hint" style={{ marginTop: 6 }}>Prioriza estos colegios: agenda sus servicios, atiende los vencidos y da seguimiento a la satisfacción.</div>
@@ -248,26 +248,26 @@ export default function HojaAsesor() {
           {/* Mi cartera */}
           <div className="panel">
             <h3>📊 Tu cartera</h3>
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start', fontSize: 12 }}>
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start', fontSize: 'var(--fs-body)' }}>
               <div>
-                <div style={{ color: 'var(--mut)', fontSize: 11, marginBottom: 4 }}>Colegios</div>
+                <div style={{ color: 'var(--mut)', fontSize: 'var(--fs-meta)', marginBottom: 4 }}>Colegios</div>
                 <span style={{ color: SMART, fontWeight: 700 }}>{nSmart} SMART</span> · <span style={{ color: CORE, fontWeight: 700 }}>{nCore} CORE</span>
               </div>
               <div style={{ minWidth: 200, flex: 1 }}>
-                <div style={{ color: 'var(--mut)', fontSize: 11, marginBottom: 4 }}>Tu carga uso/prof vs tu capacidad anual (~{perAseCap})</div>
+                <div style={{ color: 'var(--mut)', fontSize: 'var(--fs-meta)', marginBottom: 4 }}>Tu carga uso/prof vs tu capacidad anual (~{perAseCap})</div>
                 <div style={{ height: 8, borderRadius: 8, background: 'var(--track)', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${pctCap}%`, background: carga.usoProf > perAseCap ? 'var(--gold)' : SMART }} />
                 </div>
-                <div style={{ fontSize: 10, color: carga.usoProf > perAseCap ? 'var(--gold)' : 'var(--mut)', marginTop: 3 }}>
+                <div style={{ fontSize: 'var(--fs-caption)', color: carga.usoProf > perAseCap ? 'var(--gold)' : 'var(--mut)', marginTop: 3 }}>
                   {carga.usoProf} de {perAseCap} ({pctCap}%){carga.usoProf > perAseCap ? ' · sobrecarga: habla con tu coordinador' : ''}</div>
               </div>
               <div>
-                <div style={{ color: 'var(--mut)', fontSize: 11, marginBottom: 4 }}>Satisfacción de tu cartera</div>
+                <div style={{ color: 'var(--mut)', fontSize: 'var(--fs-meta)', marginBottom: 4 }}>Satisfacción de tu cartera</div>
                 <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
                   {satDist.map((s) => (
-                    <span key={s.v} title={s.label} style={{ fontSize: 13, opacity: s.n ? 1 : 0.35 }}>{s.emoji}<b style={{ fontSize: 11, marginLeft: 2 }}>{s.n}</b></span>
+                    <span key={s.v} title={s.label} style={{ fontSize: 'var(--fs-title)', opacity: s.n ? 1 : 0.35 }}>{s.emoji}<b style={{ fontSize: 'var(--fs-meta)', marginLeft: 2 }}>{s.n}</b></span>
                   ))}
-                  <span style={{ fontSize: 10, color: 'var(--mut)' }}>· {sinCalif} sin calificar</span>
+                  <span style={{ fontSize: 'var(--fs-caption)', color: 'var(--mut)' }}>· {sinCalif} sin calificar</span>
                 </div>
               </div>
             </div>
@@ -277,19 +277,19 @@ export default function HojaAsesor() {
           <h2 style={{ marginTop: 18 }}>Mis colegios</h2>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', margin: '6px 0 10px' }}>
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔍 Buscar colegio…"
-              aria-label="Buscar colegio" style={{ flex: '1 1 150px', minWidth: 140, fontSize: 14, padding: '7px 10px' }} />
-            <select value={fEstado} onChange={(e) => setFEstado(e.target.value as typeof fEstado)} style={{ width: 'auto', fontSize: 12, padding: '7px 6px' }}>
+              aria-label="Buscar colegio" style={{ flex: '1 1 150px', minWidth: 140, fontSize: 'var(--fs-input)', padding: '7px 10px' }} />
+            <select value={fEstado} onChange={(e) => setFEstado(e.target.value as typeof fEstado)} style={{ width: 'auto', fontSize: 'var(--fs-body)', padding: '7px 6px' }}>
               <option value="todos">Todos</option>
               <option value="vencidos">Con vencidos</option>
               <option value="pendientes">Con pendientes</option>
               <option value="completos">Completados</option>
             </select>
-            <select value={fCamp} onChange={(e) => setFCamp(e.target.value as typeof fCamp)} style={{ width: 'auto', fontSize: 12, padding: '7px 6px' }}>
+            <select value={fCamp} onChange={(e) => setFCamp(e.target.value as typeof fCamp)} style={{ width: 'auto', fontSize: 'var(--fs-body)', padding: '7px 6px' }}>
               <option value="todos">Ambas</option>
               <option value="SMART">SMART</option>
               <option value="CORE">CORE</option>
             </select>
-            <select value={fTier} onChange={(e) => setFTier(e.target.value as typeof fTier)} style={{ width: 'auto', fontSize: 12, padding: '7px 6px' }}>
+            <select value={fTier} onChange={(e) => setFTier(e.target.value as typeof fTier)} style={{ width: 'auto', fontSize: 'var(--fs-body)', padding: '7px 6px' }}>
               <option value="todos">Todo tipo</option>
               {TIER_SEED.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
             </select>
@@ -319,7 +319,7 @@ export default function HojaAsesor() {
       {misColegios.length > 0 && (
         <button onClick={() => abrirAlerta()} aria-label="Reportar caso crítico"
           style={{ position: 'fixed', right: 16, bottom: 16, zIndex: 60, background: ROJO, color: '#fff', border: 'none',
-            borderRadius: 999, padding: '13px 18px', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit',
+            borderRadius: 999, padding: '13px 18px', fontSize: 'var(--fs-title)', fontWeight: 700, fontFamily: 'inherit',
             boxShadow: '0 4px 16px rgba(0,0,0,.28)', cursor: 'pointer' }}>🚨 Caso crítico</button>
       )}
 
@@ -333,7 +333,7 @@ export default function HojaAsesor() {
               <div style={{ textAlign: 'center', padding: '10px 0' }}>
                 <div style={{ fontSize: 34 }}>✅</div>
                 <h3 style={{ margin: '6px 0 4px' }}>Alerta enviada</h3>
-                <p style={{ fontSize: 13, color: 'var(--mut)', margin: '0 0 14px' }}>Tu coordinador la verá en su tablero de planeación y te contactará.</p>
+                <p style={{ fontSize: 'var(--fs-title)', color: 'var(--mut)', margin: '0 0 14px' }}>Tu coordinador la verá en su tablero de planeación y te contactará.</p>
                 <button className="gate-btn" style={{ maxWidth: 200, margin: '0 auto' }} onClick={() => setAlertaOpen(false)}>Cerrar</button>
               </div>
             ) : (<>
@@ -342,19 +342,19 @@ export default function HojaAsesor() {
                 <button onClick={() => setAlertaOpen(false)} aria-label="Cerrar"
                   style={{ border: 'none', background: 'transparent', fontSize: 20, cursor: 'pointer', color: 'var(--mut)', padding: 4 }}>×</button>
               </div>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--mut)', marginBottom: 8 }}>Colegio
+              <label style={{ display: 'block', fontSize: 'var(--fs-body)', color: 'var(--mut)', marginBottom: 8 }}>Colegio
                 <select value={alCol} onChange={(e) => setAlCol(e.target.value)} style={{ marginTop: 3, fontSize: 15, padding: '8px 8px' }}>
                   {misColegios.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select>
               </label>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--mut)', marginBottom: 8 }}>Tipo de problema
+              <label style={{ display: 'block', fontSize: 'var(--fs-body)', color: 'var(--mut)', marginBottom: 8 }}>Tipo de problema
                 <select value={alTipo} onChange={(e) => setAlTipo(e.target.value as ProblemaKey)} style={{ marginTop: 3, fontSize: 15, padding: '8px 8px' }}>
                   {PROBLEMAS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
                 </select>
               </label>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--mut)', marginBottom: 12 }}>Describe el caso
+              <label style={{ display: 'block', fontSize: 'var(--fs-body)', color: 'var(--mut)', marginBottom: 12 }}>Describe el caso
                 <textarea value={alDesc} autoFocus onChange={(e) => setAlDesc(e.target.value)} placeholder="¿Qué está pasando y qué necesitas?"
-                  style={{ width: '100%', marginTop: 3, fontSize: 15, padding: '8px 10px', minHeight: 84, boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }} />
+                  style={{ width: '100%', marginTop: 3, fontSize: 16, padding: '8px 10px', minHeight: 84, boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }} />
               </label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="sec" style={{ flex: 1, minHeight: 42 }} onClick={() => setAlertaOpen(false)}>Cancelar</button>
