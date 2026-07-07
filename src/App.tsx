@@ -7,12 +7,14 @@ import { RouteSkeleton } from './ui/Skeleton'
 import { useAcceso } from './lib/accesoCtx'
 import { tabsPorRol, rutaInicial, rutaPermitida } from './lib/sesion'
 import { ROLES } from './data/usuarios'
+import { recargarFresca } from './lib/recarga'
 
-// Los chunks de rutas cambian de nombre en cada deploy: si alguien tiene la app
-// abierta durante uno (o el CDN aún no propaga un sitio recién publicado), el
-// import dinámico da 404 y React lo lanza al ErrorBoundary. Antes de rendirnos,
-// reintentamos con UNA recarga automática (candado en sessionStorage para no
-// ciclar); la recarga trae el index.html nuevo con los nombres correctos.
+// Los chunks de rutas cambian de nombre en cada deploy y los viejos se borran.
+// Si un navegador tiene el index.html cacheado (GitHub Pages: max-age=600) y pide
+// un chunk ya borrado, el import da 404. Antes de rendirnos reintentamos con UNA
+// recarga que ROMPE la caché (recargarFresca): así trae el index.html del deploy
+// actual con los nombres de chunk correctos. Candado en sessionStorage para no
+// ciclar; si tras la recarga fresca aún falla, lo atiende el ErrorBoundary.
 const lazyConReintento = (importar: () => Promise<{ default: ComponentType }>, clave: string) =>
   lazy(() => {
     const candado = `psp-chunk-retry-${clave}`
@@ -22,7 +24,7 @@ const lazyConReintento = (importar: () => Promise<{ default: ComponentType }>, c
         try {
           if (!sessionStorage.getItem(candado)) {
             sessionStorage.setItem(candado, '1')
-            window.location.reload()
+            recargarFresca()
             return new Promise<never>(() => {}) // la recarga toma el control
           }
         } catch { /* noop */ }

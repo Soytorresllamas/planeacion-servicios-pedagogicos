@@ -1,15 +1,17 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { resetLocalData } from './lib/localData'
+import { recargarFresca, urlRecargaFresca } from './lib/recarga'
 
 interface Props { children: ReactNode }
 interface State { error: Error | null }
 
 /**
- * Red de seguridad: si algo revienta durante el render (datos locales viejos,
- * o un chunk de la app que no se pudo descargar tras un deploy), mostramos una
- * tarjeta de recuperación. «Reiniciar» limpia TODO lo local (datos + sesión) y
- * recarga rompiendo caché, para salir incluso de un 404 cacheado por el CDN.
+ * Red de seguridad: si algo revienta durante el render (una pieza de la app que
+ * no se descargó tras un deploy, o datos locales viejos), mostramos una tarjeta
+ * de recuperación. El caso común (chunk viejo cacheado) se resuelve con una
+ * recarga que ROMPE la caché SIN perder nada; el botón secundario es la opción
+ * nuclear que además limpia lo local y cierra la sesión.
  */
 export default class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null }
@@ -23,11 +25,14 @@ export default class ErrorBoundary extends Component<Props, State> {
     console.error('ErrorBoundary capturó un fallo de render:', error, info.componentStack)
   }
 
+  // Caso común: recarga fresca (evita el index.html cacheado); conserva sesión y datos.
+  private recargar = () => recargarFresca()
+
+  // Opción nuclear: limpia lo local + sesión y recarga fresca desde el inicio.
   private reiniciar = () => {
     resetLocalData()
     try { sessionStorage.clear() } catch { /* noop */ }
-    // recarga con query única: evita el HTML/404 cacheados en el borde del CDN
-    window.location.replace(`${window.location.pathname}?r=${Date.now()}`)
+    window.location.replace(urlRecargaFresca({ pathname: window.location.pathname, search: window.location.search, hash: '' }))
   }
 
   render() {
@@ -37,12 +42,12 @@ export default class ErrorBoundary extends Component<Props, State> {
         <div className="gate-card">
           <h1 className="gate-title">Algo se atoró</h1>
           <p style={{ color: 'var(--mut)', fontSize: 14, lineHeight: 1.55, margin: '0 0 18px' }}>
-            No se pudo mostrar esta pantalla: o hay datos locales de una versión anterior,
-            o una pieza de la app no se descargó completa. «Reiniciar» limpia lo local y
-            vuelve a entrar; no pierdes nada que ya esté sincronizado.
+            Casi siempre es una pieza de la app que no se descargó tras una actualización.
+            «Recargar» trae la versión más reciente sin que pierdas nada. Si aun así no carga,
+            usa «Reiniciar» (limpia lo local y te pide entrar de nuevo).
           </p>
-          <button className="gate-btn" onClick={this.reiniciar}>Reiniciar y volver a entrar</button>
-          <button className="sec" style={{ width: '100%', marginTop: 10 }} onClick={() => window.location.reload()}>Solo recargar</button>
+          <button className="gate-btn" onClick={this.recargar}>Recargar</button>
+          <button className="sec" style={{ width: '100%', marginTop: 10 }} onClick={this.reiniciar}>Reiniciar y volver a entrar</button>
         </div>
       </div>
     )
