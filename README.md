@@ -1,5 +1,7 @@
 # SM · Planeación de Servicios Pedagógicos (V3)
 
+> 🧭 **¿Retomando el proyecto?** Empieza por [`CONTEXTO.md`](CONTEXTO.md) — resumen de arquitectura, seguridad, estado y pendientes.
+
 Plataforma del ciclo completo de servicios pedagógicos SM 2026-2027 (campañas SMART y CORE), con cuentas de usuario por rol. Incluye:
 
 - **Simulador** de coberturas y asesores: servicios por mes, empleados vs externos, retención vs conquista y **módulo de costos** (servicios + traslados).
