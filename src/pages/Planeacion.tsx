@@ -5,8 +5,9 @@ import {
   defaultPlaneacion, generateColegios, asignarPorTipo, liberarPorTipo,
   contarPorTipo, cargaAsesor, resumen, setServicio, patchColegio, renombrarAsesor, avanceAsignado, ESTATUS,
   hoyISO, urgencia, agendaAsesor, serviciosDeAsesor, SERIES, INGLES, SATISFACCION, PROBLEMAS, atenderAlerta,
+  agregarServicioExtra, quitarServicioExtra,
 } from '../data/planeacion'
-import type { PlaneacionData, Estatus, Servicio, Colegio } from '../data/planeacion'
+import type { PlaneacionData, Estatus, Servicio, Colegio, ServTipo } from '../data/planeacion'
 import { loadLocal, saveLocal, loadRemote, saveRemote } from '../lib/planeacionStore'
 import { usePersistencia } from '../lib/persistencia'
 import { NumberTicker } from '../ui/NumberTicker'
@@ -74,6 +75,13 @@ export default function Planeacion() {
     setData((d) => ({ ...d, colegios: patchColegio(d.colegios, id, patch) }))
   const renombrarAse = (id: string, nombre: string) =>
     setData((d) => ({ ...d, asesores: renombrarAsesor(d.asesores, id, nombre) }))
+  // talleres extra (casos de excepción): los agrega/quita coordinación desde la hoja
+  const agregarExtra = (colegioId: string, tipo: ServTipo) => {
+    setData((d) => ({ ...d, colegios: agregarServicioExtra(d.colegios, colegioId, tipo) }))
+    toast('Taller extra agregado (marcado EXTRA)', 'ok')
+  }
+  const quitarExtra = (colegioId: string, idx: number) =>
+    setData((d) => ({ ...d, colegios: quitarServicioExtra(d.colegios, colegioId, idx) }))
 
   const res = resumen(data.colegios)
   const targetName = data.asesores.find((a) => a.id === target)?.nombre ?? '—'
@@ -335,8 +343,9 @@ export default function Planeacion() {
           </>)}
 
           {view === 'hoja' && (<>
-            <h2 style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>Hoja de {targetName}
-              <a href="#/mi-hoja" style={{ fontSize: 11, fontWeight: 400 }} title="Cómo la vería el asesor (mockup con login propio)">Ver portal del asesor ↗</a></h2>
+            <h2 style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>Hoja de {targetName}
+              <a href="#/mi-hoja" style={{ fontSize: 11, fontWeight: 400 }} title="Cómo la vería el asesor (con su propio login)">Ver portal del asesor ↗</a>
+              <a href="#/mis-colegios" style={{ fontSize: 11, fontWeight: 400 }} title="Cómo lo vería un ejecutivo comercial (con su propio login)">Ver portal del ejecutivo ↗</a></h2>
             {misColegios.length === 0 ? (
               <div className="hint">Este asesor no tiene colegios asignados. Ve a «Asignación» para darle cupos.</div>
             ) : (<>
@@ -410,6 +419,8 @@ export default function Planeacion() {
                       onToggle={() => toggleColapso(c.id)}
                       onServ={(i, p) => setServ(c.id, i, p)}
                       onPatch={(p) => patchCol(c.id, p)}
+                      onAgregar={(t) => agregarExtra(c.id, t)}
+                      onQuitarExtra={(i) => quitarExtra(c.id, i)}
                       servFilter={pasaServicio} />
                   ))}
                 </div>

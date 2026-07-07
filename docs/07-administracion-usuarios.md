@@ -91,3 +91,18 @@ señal de seguimiento (Activo / N días sin entrar / Nunca ha entrado / Desactiv
   además los **backups automáticos de Supabase** (plan Pro) — pendiente/independiente.
 - Código: `src/lib/respaldos.ts` (helpers puros + operaciones), disparo en
   `planeacionStore`/`adminStore`, UI en `pages/Administracion.tsx`.
+
+## Novedades V3.1 (julio 2026)
+
+- **5º rol: `ejecutivo` (Ejecutivo Comercial).** Solo lectura de `/mis-colegios`.
+  Se liga con la columna `psp_usuarios.ejecutivo` = su nombre TAL CUAL viene en
+  «Ejecutivo Responsable» del archivo de BI (match por nombre normalizado: sin
+  acentos/caja/espacios). El alta pide ese nombre (datalist del catálogo).
+- **Vista pública del director** (`psp_vista_director(token)`): función SECURITY
+  DEFINER ejecutable por `anon`. Devuelve SOLO el subconjunto publicable del colegio
+  cuyo `tokenDirector` (32 hex, ≈128 bits) coincida: nombre, campaña, niveles,
+  series por nivel, nombre del asesor y servicios (tipo/estatus/fechas/nivel).
+  NUNCA: tier, costos, notas, satisfacción, valor, gerencia ni contacto. El token se
+  genera/revoca por colegio desde Planeación; sin coincidencia devuelve NULL.
+- **Migración:** `supabase_actualizacion_v3_1.sql` (columna `ejecutivo`, CHECK de rol
+  con 5 valores, trigger que protege `ejecutivo` en self-updates, RPC + grants).

@@ -39,12 +39,15 @@ const Administracion = lazyConReintento(() => import('./pages/Administracion.tsx
 const Streamgraph = lazyConReintento(() => import('./pages/Streamgraph.tsx'), 'servicios')
 const Documentos = lazyConReintento(() => import('./pages/Documentos.tsx'), 'documentos')
 const HojaAsesor = lazyConReintento(() => import('./pages/HojaAsesor.tsx'), 'mi-hoja')
+const MisColegios = lazyConReintento(() => import('./pages/MisColegios.tsx'), 'mis-colegios')
+const VistaDirectorPreview = lazyConReintento(() => import('./pages/VistaDirectorPreview.tsx'), 'vista-director')
 
 export default function App() {
   const { sesion, salir } = useAcceso()
   const path = useLocation().pathname
-  // El portal del asesor es un mundo aparte: sin el header/nav del equipo.
-  const esPortal = path === '/mi-hoja'
+  // Los portales (asesor, ejecutivo) y la vista del director son mundos aparte:
+  // sin el header/nav del equipo.
+  const esPortal = path === '/mi-hoja' || path === '/mis-colegios' || path.startsWith('/vista-director')
   const inicio = rutaInicial(sesion.rol)
   const rolLabel = ROLES.find((r) => r.key === sesion.rol)?.label ?? sesion.rol
 
@@ -83,8 +86,11 @@ export default function App() {
             {/* rutas fuera del menú (solo admin) */}
             <Route path="/servicios" element={g('/servicios', <Streamgraph />)} />
             <Route path="/documentos" element={g('/documentos', <Documentos />)} />
-            {/* portal del asesor; otros roles lo ven como vista previa */}
+            {/* portales del asesor y del ejecutivo; otros roles los ven como vista previa */}
             <Route path="/mi-hoja" element={g('/mi-hoja', <HojaAsesor />)} />
+            <Route path="/mis-colegios" element={g('/mis-colegios', <MisColegios />)} />
+            {/* vista previa interna de la pantalla del director (la pública vive fuera del login) */}
+            <Route path="/vista-director/:id" element={g('/vista-director', <VistaDirectorPreview />)} />
             <Route path="*" element={<Navigate to={inicio} replace />} />
           </Routes>
         </Suspense>

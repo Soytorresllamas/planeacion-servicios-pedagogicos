@@ -2,7 +2,7 @@
 // El mapeo fila→FilaColegio es lógica pura y testeable; la lectura del File
 // vive al final (XLSX se importa dinámicamente para no engordar el bundle).
 import type { Campaign, TierKey } from '../data/model';
-import type { FilaColegio, PorNivel } from '../data/planeacion';
+import type { FilaColegio, PorNivel, NivelKey, ContactoColegio } from '../data/planeacion';
 
 /** Encabezado normalizado: minúsculas, sin acentos, espacios colapsados. */
 export const normHeader = (s: string): string =>
@@ -30,6 +30,11 @@ const ALIAS: Record<string, string[]> = {
   inglesSec:  ['ingles secundaria'],
   inglesBach: ['ingles bachillerato'],
   otraSerie:  ['otra serie', 'otras series'],
+  niveles:    ['niveles', 'niveles escolares', 'niveles del colegio'],
+  conNombre:  ['contacto nombre', 'nombre de contacto', 'nombre del contacto', 'contacto'],
+  conRol:     ['contacto rol', 'rol de contacto', 'rol del contacto', 'cargo de contacto', 'cargo del contacto', 'cargo'],
+  conTel:     ['contacto telefono', 'telefono de contacto', 'telefono del contacto', 'telefono'],
+  conCorreo:  ['contacto correo', 'correo de contacto', 'correo del contacto', 'correo electronico', 'correo', 'email'],
 };
 
 const CAMPAIGNS: Record<string, Campaign> = { smart: 'SMART', core: 'CORE' };
@@ -52,6 +57,24 @@ export const parseNum = (v: unknown): number | undefined => {
 const texto = (v: unknown): string | undefined => {
   const s = String(v ?? '').trim();
   return s ? s : undefined;
+};
+
+/** «Preescolar, Primaria y Secundaria» → ['pre','pri','sec'] (tolerante a variantes). */
+export const parseNiveles = (v: unknown): NivelKey[] | undefined => {
+  const s = String(v ?? '').trim();
+  if (!s) return undefined;
+  const out = new Set<NivelKey>();
+  for (const tok of s.split(/[,;/·|]|\sy\s/)) {
+    const t = normHeader(tok);
+    if (!t) continue;
+    if (t.startsWith('prees') || t === 'pre' || t.startsWith('kinder') || t.startsWith('maternal')) out.add('pre');
+    else if (t.startsWith('prim') || t === 'pri') out.add('pri');
+    else if (t.startsWith('sec')) out.add('sec');
+    else if (t.startsWith('bach') || t.startsWith('prepa')) out.add('bach');
+  }
+  const orden: NivelKey[] = ['pre', 'pri', 'sec', 'bach'];
+  const res = orden.filter((k) => out.has(k));
+  return res.length ? res : undefined;
 };
 
 export interface MapeoResultado {
@@ -91,6 +114,21 @@ export function mapearFilas(registros: Record<string, unknown>[]): MapeoResultad
       const o: PorNivel = { pre: texto(porCampo.get(pre)), pri: texto(porCampo.get(pri)), sec: texto(porCampo.get(sec)), bach: texto(porCampo.get(bach)) };
       return o.pre || o.pri || o.sec || o.bach ? o : undefined;
     };
+    const seriesNivel = nivel('seriePre', 'seriePri', 'serieSec', 'serieBach');
+    const inglesNivel = nivel('inglesPre', 'inglesPri', 'inglesSec', 'inglesBach');
+
+    // niveles del colegio: columna «Niveles» o, si no viene, derivados de series/inglés
+    const derivados = (['pre', 'pri', 'sec', 'bach'] as NivelKey[]).filter((k) => seriesNivel?.[k] || inglesNivel?.[k]);
+    const niveles = parseNiveles(porCampo.get('niveles')) ?? (derivados.length ? derivados : undefined);
+
+    // contacto del colegio (para coordinar agenda y prestación de servicios)
+    const con: ContactoColegio = {
+      nombre: texto(porCampo.get('conNombre')),
+      rol: texto(porCampo.get('conRol')),
+      telefono: texto(porCampo.get('conTel')),
+      correo: texto(porCampo.get('conCorreo')),
+    };
+    const contacto = con.nombre || con.rol || con.telefono || con.correo ? con : undefined;
 
     filas.push({
       nombre, campaign, tier,
@@ -101,9 +139,9 @@ export function mapearFilas(registros: Record<string, unknown>[]): MapeoResultad
       ejecutivo: texto(porCampo.get('ejecutivo')),
       asesorPed: texto(porCampo.get('asesorPed')),
       antiguedad: parseNum(porCampo.get('antiguedad')),
-      seriesNivel: nivel('seriePre', 'seriePri', 'serieSec', 'serieBach'),
-      inglesNivel: nivel('inglesPre', 'inglesPri', 'inglesSec', 'inglesBach'),
+      seriesNivel, inglesNivel,
       otraSerie: texto(porCampo.get('otraSerie')),
+      niveles, contacto,
     });
   });
 

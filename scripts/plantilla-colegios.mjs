@@ -7,20 +7,27 @@ import { dirname, join } from 'node:path';
 const HEADERS = [
   'Nombre de Colegio', 'ID en CRM', 'Clave de Colegio', 'Campaña', 'Categoría de Colegio',
   'Valor Real de Colegio', 'Gerencia Responsable', 'Ejecutivo Responsable', 'Asesor Pedagógico',
-  'Años de Antigüedad',
+  'Años de Antigüedad', 'Niveles',
   'Serie Preescolar', 'Serie Primaria', 'Serie Secundaria', 'Bachillerato',
   'Inglés Preescolar', 'Inglés Primaria', 'Inglés Secundaria', 'Inglés Bachillerato', 'Otra Serie',
+  'Contacto Nombre', 'Contacto Rol', 'Contacto Teléfono', 'Contacto Correo',
 ];
 
 // Filas de ejemplo (borrarlas antes de la carga real). Nótese que el ejecutivo
 // comercial y el asesor pedagógico son personas distintas.
 const EJEMPLOS = [
   ['Instituto Cumbres del Valle', 'CRM-000123', 'MX-0451', 'SMART', 'Top', 985000, 'Gerencia Centro', 'Mariana López', 'Laura Sánchez', 12,
-    'Acierta', 'Acierta', 'Acierta', '', 'Bright Sparks', 'Bright Sparks', 'Winglish', '', ''],
+    'Preescolar, Primaria, Secundaria',
+    'Acierta', 'Acierta', 'Acierta', '', 'Bright Sparks', 'Bright Sparks', 'Winglish', '', '',
+    'Gabriela Rentería', 'Directora académica', '55 1234 5678', 'g.renteria@cumbresvalle.edu.mx'],
   ['Colegio Nuevo Amanecer', 'CRM-000348', 'MX-1102', 'CORE', 'Medio', 310000, 'Gerencia Norte', 'Jorge Ramírez', 'Pedro Gómez', 5,
-    '', 'Revuela Up', 'Revuela Up', '', '', 'Winglish', 'Winglish', '', ''],
+    'Primaria, Secundaria',
+    '', 'Revuela Up', 'Revuela Up', '', '', 'Winglish', 'Winglish', '', '',
+    'Raúl Ortega', 'Coordinador general', '81 9876 5432', 'rortega@nuevoamanecer.mx'],
   ['Centro Escolar Monte Albán', 'CRM-000891', 'MX-0779', 'CORE', 'Bajo', 145000, 'Gerencia Sur', 'Jorge Ramírez', 'Pedro Gómez', 22,
-    '', 'Revuela Up', '', '', '', '', '', '', 'Serie legada 2019'],
+    '',
+    '', 'Revuela Up', '', '', '', '', '', '', 'Serie legada 2019',
+    '', '', '', ''],
 ];
 
 const INSTRUCCIONES = [
@@ -35,6 +42,7 @@ const INSTRUCCIONES = [
   ['Ejecutivo Responsable', 'Recomendada', 'Texto (nombre completo)', 'Ejecutivo COMERCIAL responsable del colegio. Queda como dato para análisis y filtros; NO es el asesor pedagógico y no asigna servicios.'],
   ['Asesor Pedagógico', 'Recomendada', 'Texto (nombre completo)', 'Asesor que atiende los servicios pedagógicos. Se convierte en el asesor del colegio: si no existe se crea y el colegio queda asignado a él.'],
   ['Años de Antigüedad', 'No', 'Número', 'Años como cliente de SM.'],
+  ['Niveles', 'No', 'Lista separada por comas', 'Niveles escolares del colegio: Preescolar, Primaria, Secundaria y/o Bachillerato. Si viene vacía, se deducen de las columnas de serie/inglés por nivel.'],
   ['Serie Preescolar', 'No', 'Texto', 'Serie que usa en ese nivel (vacío = no aplica).'],
   ['Serie Primaria', 'No', 'Texto', ''],
   ['Serie Secundaria', 'No', 'Texto', ''],
@@ -44,6 +52,10 @@ const INSTRUCCIONES = [
   ['Inglés Secundaria', 'No', 'Texto', ''],
   ['Inglés Bachillerato', 'No', 'Texto', ''],
   ['Otra Serie', 'No', 'Texto', 'Cualquier otra serie no contemplada arriba.'],
+  ['Contacto Nombre', 'Recomendada', 'Texto', 'Persona del colegio con quien se coordinan la agenda y la prestación de servicios.'],
+  ['Contacto Rol', 'Recomendada', 'Texto', 'Cargo del contacto (directora académica, coordinador general…).'],
+  ['Contacto Teléfono', 'Recomendada', 'Texto', 'Teléfono directo del contacto.'],
+  ['Contacto Correo', 'Recomendada', 'Correo', 'Correo del contacto.'],
   [],
   ['Formato', '', '', 'Una fila por colegio. No cambiar los encabezados. Se acepta .xlsx o .csv (UTF-8).'],
   ['Ejemplos', '', '', 'Las 3 filas de la hoja «Colegios» son de ejemplo: bórrenlas antes de entregar.'],

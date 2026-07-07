@@ -162,3 +162,22 @@ Ruta `#/planeacion` con su `NavLink` en `src/App.tsx`. La tabla `sm_campanas_pla
 - No hay login por asesor (herramienta central).
 - No auto-reparte la asignación (es manual).
 - No re-sincroniza servicios ya congelados cuando cambia la matriz (se regenera a propósito).
+
+## 12. Novedades V3.1 (feedback de usuarios, julio 2026)
+
+- **Niveles escolares**: el colegio declara sus niveles (chips Pre/Pri/Sec/Bach en la
+  tarjeta; se derivan de las series por nivel si no vienen) y **cada servicio puede
+  indicar el nivel que atiende** (select en la fila; badge en las etiquetas).
+- **Talleres extra**: coordinación agrega talleres fuera de la matriz del tipo
+  (+Uso/+Profundización/+Didáctica en la tarjeta) para casos de excepción. Quedan
+  marcados `extra: true` (badge EXTRA), cuentan en carga/capacidad/rentabilidad y son
+  los ÚNICOS servicios que se pueden quitar (la matriz congelada nunca se toca).
+  Lógica: `agregarServicioExtra` / `quitarServicioExtra` en `data/planeacion.ts`.
+- **Contacto del colegio**: nombre, rol, teléfono y correo por colegio (disclosure 📇
+  en la tarjeta, editable también desde el portal del asesor; viene en la carga de BI).
+- **Enlace del director**: cada tarjeta (modo coordinación) genera/copia/regenera/
+  desactiva el enlace público `#/director/<token>` con la pantalla de avance del
+  colegio (ver `docs/07` §seguridad y `supabase_actualizacion_v3_1.sql`).
+- **Portal del ejecutivo comercial** (`/mis-colegios`): solo lectura; sus colegios
+  (match por «Ejecutivo Responsable» normalizado) con énfasis en comentarios del
+  asesor, alertas, contacto y próximas sesiones.

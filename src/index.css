@@ -146,6 +146,57 @@ button:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(37,9
 .card-in{animation:cardIn .42s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(var(--i,0)*45ms);}
 @keyframes cardIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
 
+/* ---- Vista del director (enlace público por colegio) ----
+   La cara ante el cliente final: misma familia visual de la app, con el color
+   de la campaña (--dir-acc: SMART azul / CORE teal) como hilo conductor. */
+.dir-wrap{min-height:100vh;background:var(--bg);}
+.dir-band{background:var(--surface);border-bottom:1px solid var(--line);}
+.dir-band .inner{max-width:680px;margin:0 auto;padding:13px 20px;display:flex;align-items:center;gap:12px;}
+.dir-band .ciclo{margin-left:auto;font-size:11px;font-weight:600;color:var(--mut);text-align:right;line-height:1.35;}
+.dir-main{max-width:680px;margin:0 auto;padding:28px 20px 56px;}
+.dir-hero{padding:2px 2px 6px;}
+.dir-hero .prog{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--mut);margin-bottom:8px;}
+.dir-hero .prog .pt{width:9px;height:9px;border-radius:3px;background:var(--dir-acc);flex:none;}
+.dir-hero h1{font-size:clamp(26px,6vw,36px);letter-spacing:-.4px;line-height:1.12;margin:0 0 8px;text-wrap:balance;}
+.dir-niveles{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.dir-nivel{font-size:11px;font-weight:700;color:var(--ink-2);background:var(--surface);border:1px solid var(--line-2);border-radius:999px;padding:3px 11px;}
+.dir-panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-top:14px;}
+.dir-panel h2{font-size:15px;margin:0 0 12px;}
+.dir-resumen{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+.dir-resumen .datos{flex:1;min-width:200px;}
+.dir-resumen .frase{font-size:13.5px;color:var(--ink-2);line-height:1.55;margin:0 0 10px;}
+.dir-segbar{display:flex;gap:3px;}
+.dir-segbar span{flex:1;height:9px;border-radius:3px;background:var(--line-2);}
+.dir-segbar span.done{background:var(--dir-acc);}
+.dir-segbar span.next{background:var(--gold-l);}
+.dir-leyenda{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mut);margin-top:8px;}
+.dir-leyenda i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px;font-style:normal;}
+.dir-tipo{display:grid;grid-template-columns:1fr auto;gap:3px 14px;padding:11px 0;border-top:1px solid var(--line);align-items:baseline;}
+.dir-tipo:first-of-type{border-top:none;padding-top:2px;}
+.dir-tipo b{font-size:13.5px;}
+.dir-tipo .desc{grid-column:1;font-size:11.5px;color:var(--mut);line-height:1.45;}
+.dir-tipo .num{font-family:Newsreader,serif;font-size:17px;font-weight:800;color:var(--ink);white-space:nowrap;}
+.dir-tipo .num small{font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:10.5px;font-weight:600;color:var(--mut);margin-left:3px;}
+.dir-tipo .mini{grid-column:1/-1;height:6px;border-radius:4px;background:var(--track);overflow:hidden;margin-top:4px;}
+.dir-tipo .mini span{display:block;height:100%;border-radius:4px;background:var(--dir-acc);transition:width .7s cubic-bezier(.22,1,.36,1);}
+.dir-mes{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin:16px 0 6px;}
+.dir-mes:first-of-type{margin-top:2px;}
+.dir-item{position:relative;margin-left:7px;border-left:2px solid var(--line);padding:7px 0 7px 22px;}
+.dir-item:last-child{border-left-color:transparent;}
+.dir-dot{position:absolute;left:-8px;top:12px;width:14px;height:14px;border-radius:99px;background:var(--surface);border:2px solid var(--line-2);box-sizing:border-box;}
+.dir-dot.done{background:var(--dir-acc);border-color:var(--dir-acc);}
+.dir-dot.next{border-color:var(--gold);}
+.dir-item .tit{font-size:13.5px;font-weight:600;color:var(--ink);}
+.dir-item .cua{font-size:11.5px;color:var(--mut);margin-top:1px;}
+.dir-item .cua b{color:var(--ink-2);}
+.dir-persona{display:flex;align-items:center;gap:14px;}
+.dir-avatar{width:44px;height:44px;border-radius:99px;background:var(--dir-acc);color:#fff;display:flex;align-items:center;justify-content:center;font-family:Newsreader,serif;font-size:18px;font-weight:700;flex:none;}
+.dir-series{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:12.5px;}
+.dir-series dt{color:var(--mut);font-weight:600;}
+.dir-series dd{margin:0;color:var(--ink-2);}
+.dir-foot{margin-top:26px;font-size:11px;color:var(--faint);line-height:1.6;text-align:center;}
+@media(max-width:480px){.dir-resumen{gap:16px;}.dir-panel{padding:15px 15px;}}
+
 /* Accesibilidad: sin movimiento para quien lo pide */
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}

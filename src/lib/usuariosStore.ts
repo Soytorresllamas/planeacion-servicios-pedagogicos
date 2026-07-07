@@ -18,20 +18,23 @@ const supabaseAltas = createClient(SB_URL, SB_KEY, {
 // ── mapeo fila DB (snake_case) ↔ Usuario (camelCase) ──
 interface FilaDB {
   id: string; correo: string; nombre: string; apellido: string; rol: Rol;
-  asesor_id: string | null; fecha_ingreso: string | null; temp_password: boolean;
+  asesor_id: string | null; ejecutivo: string | null; fecha_ingreso: string | null;
+  temp_password: boolean;
   activo: boolean; creado: string; ultimo_ingreso: string | null; ingresos: number;
 }
 
 const aUsuario = (f: FilaDB): Usuario => ({
   id: f.id, correo: f.correo, nombre: f.nombre, apellido: f.apellido, rol: f.rol,
-  asesorId: f.asesor_id ?? undefined, fechaIngreso: f.fecha_ingreso ?? undefined,
+  asesorId: f.asesor_id ?? undefined, ejecutivo: f.ejecutivo ?? undefined,
+  fechaIngreso: f.fecha_ingreso ?? undefined,
   tempPassword: f.temp_password, activo: f.activo, creado: f.creado,
   ultimoIngreso: f.ultimo_ingreso ?? undefined, ingresos: f.ingresos,
 });
 
 const aFila = (u: Usuario): FilaDB => ({
   id: u.id, correo: u.correo, nombre: u.nombre, apellido: u.apellido, rol: u.rol,
-  asesor_id: u.asesorId ?? null, fecha_ingreso: u.fechaIngreso ?? null,
+  asesor_id: u.asesorId ?? null, ejecutivo: u.ejecutivo ?? null,
+  fecha_ingreso: u.fechaIngreso ?? null,
   temp_password: u.tempPassword, activo: u.activo, creado: u.creado,
   ultimo_ingreso: u.ultimoIngreso ?? null, ingresos: u.ingresos,
 });
@@ -64,7 +67,7 @@ export type CrearResultado =
 
 export interface NuevoUsuario {
   nombre: string; apellido: string; correo: string; fechaIngreso: string;
-  rol: Rol; asesorId?: string;
+  rol: Rol; asesorId?: string; ejecutivo?: string;
 }
 
 /** Alta: crea la cuenta en Auth (contraseña temporal) + su fila de perfil. */
@@ -84,7 +87,7 @@ export async function crearUsuario(n: NuevoUsuario, rand?: () => number): Promis
 
   const usuario: Usuario = {
     id: alta.user.id, correo, nombre: n.nombre.trim(), apellido: n.apellido.trim(),
-    rol: n.rol, asesorId: n.asesorId, fechaIngreso: n.fechaIngreso,
+    rol: n.rol, asesorId: n.asesorId, ejecutivo: n.ejecutivo, fechaIngreso: n.fechaIngreso,
     tempPassword: true, activo: true, creado: new Date().toISOString(), ingresos: 0,
   };
   const { error: errFila } = await supabase.from(USUARIOS_TABLE).insert(aFila(usuario));
@@ -100,6 +103,7 @@ export async function patchUsuario(id: string, patch: Partial<Usuario>): Promise
   if (patch.rol !== undefined) fila.rol = patch.rol;
   if (patch.activo !== undefined) fila.activo = patch.activo;
   if (patch.asesorId !== undefined) fila.asesor_id = patch.asesorId ?? null;
+  if (patch.ejecutivo !== undefined) fila.ejecutivo = patch.ejecutivo ?? null;
   if (patch.nombre !== undefined) fila.nombre = patch.nombre;
   if (patch.apellido !== undefined) fila.apellido = patch.apellido;
   if (patch.tempPassword !== undefined) fila.temp_password = patch.tempPassword;

@@ -10,6 +10,16 @@ export type ServTipo = 'uso' | 'prof' | 'didac';
 export const ESTATUS: Estatus[] = ['pendiente', 'agendado', 'realizado'];
 export const SERV_LABEL: Record<ServTipo, string> = { uso: 'Uso', prof: 'Profundización', didac: 'Didáctica' };
 
+// Niveles escolares que atiende un colegio (y a los que apunta cada servicio).
+export type NivelKey = 'pre' | 'pri' | 'sec' | 'bach';
+export const NIVELES: { key: NivelKey; label: string; corto: string }[] = [
+  { key: 'pre', label: 'Preescolar', corto: 'Pre' },
+  { key: 'pri', label: 'Primaria', corto: 'Pri' },
+  { key: 'sec', label: 'Secundaria', corto: 'Sec' },
+  { key: 'bach', label: 'Bachillerato', corto: 'Bach' },
+];
+export const NIVEL_LABEL: Record<NivelKey, string> = { pre: 'Preescolar', pri: 'Primaria', sec: 'Secundaria', bach: 'Bachillerato' };
+
 // Catálogos de colegio (placeholder — completar con el catálogo real de SM).
 export const SERIES = ['Acierta', 'Revuela Up'];
 export const INGLES = ['Bright Sparks', 'Winglish'];
@@ -29,6 +39,8 @@ export interface Servicio {
   fechaPlan?: string;   // ISO 'YYYY-MM-DD'
   fechaReal?: string;
   nota?: string;
+  nivel?: NivelKey;     // nivel escolar que atiende este servicio (opcional)
+  extra?: boolean;      // taller agregado por coordinación FUERA de la matriz del tipo
   // ── captura logística (módulo Rentabilidad; la llena la Responsable Logística) ──
   traslado?: boolean;       // el servicio requirió traslado/viáticos
   costoTraslado?: number;   // MXN; solo tiene sentido si traslado
@@ -39,6 +51,11 @@ export interface Servicio {
 /** Serie/inglés por nivel escolar (carga masiva de BI; texto libre del CRM). */
 export interface PorNivel {
   pre?: string; pri?: string; sec?: string; bach?: string;
+}
+
+/** Contacto del colegio para coordinar la agenda y prestación de servicios. */
+export interface ContactoColegio {
+  nombre?: string; rol?: string; telefono?: string; correo?: string;
 }
 
 export interface Colegio {
@@ -53,6 +70,9 @@ export interface Colegio {
   ingles?: string;           // p.ej. Bright Sparks, Winglish
   satisfaccion?: number;     // 1-5 (caritas); undefined = sin calificar
   notasGenerales?: string;
+  niveles?: NivelKey[];      // niveles escolares que tiene el colegio (general)
+  contacto?: ContactoColegio;
+  tokenDirector?: string;    // token del enlace público del director; sin token = sin enlace
   // ── datos del CRM (carga masiva; ver docs/06-rentabilidad.md) ──
   idCrm?: string;
   clave?: string;
@@ -223,6 +243,98 @@ export function patchColegio(colegios: Colegio[], id: string, patch: Partial<Col
   return colegios.map((c) => c.id === id ? { ...c, ...patch } : c);
 }
 
+/** Niveles del colegio: los declarados o, si no hay, derivados de sus series/inglés por nivel. */
+export function nivelesDeColegio(c: Pick<Colegio, 'niveles' | 'seriesNivel' | 'inglesNivel'>): NivelKey[] {
+  if (c.niveles?.length) return c.niveles;
+  return NIVELES.map((n) => n.key).filter((k) => c.seriesNivel?.[k] || c.inglesNivel?.[k]);
+}
+
+/** Coordinación agrega un taller FUERA de la matriz del tipo (casos de excepción).
+ *  Queda marcado `extra: true` para distinguirlo y poder quitarlo. */
+export function agregarServicioExtra(colegios: Colegio[], colegioId: string, tipo: ServTipo, nivel?: NivelKey): Colegio[] {
+  return colegios.map((c) => c.id !== colegioId ? c
+    : { ...c, servicios: [...c.servicios, { tipo, estatus: 'pendiente', extra: true, ...(nivel ? { nivel } : {}) }] });
+}
+
+/** Quita un taller agregado por coordinación. SOLO borra servicios `extra`:
+ *  la matriz congelada del tipo nunca se toca. */
+export function quitarServicioExtra(colegios: Colegio[], colegioId: string, idx: number): Colegio[] {
+  return colegios.map((c) => c.id !== colegioId ? c
+    : { ...c, servicios: c.servicios.filter((s, i) => i !== idx || !s.extra) });
+}
+
+// ── Enlace público del director (pantalla de avance por colegio) ──────────────
+
+/** Token aleatorio del enlace del director: 32 hex ≈ 128 bits (impracticable de adivinar). */
+export function genTokenDirector(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Lo ÚNICO que ve el director por su enlace. Deliberadamente SIN datos internos:
+ *  ni tier (categorización comercial), ni costos, ni notas, ni satisfacción, ni valor.
+ *  El RPC psp_vista_director (SQL) devuelve exactamente esta forma; si agregas un
+ *  campo aquí, agrégalo también allá. */
+export interface ServicioDirector { tipo: ServTipo; estatus: Estatus; fechaPlan?: string; fechaReal?: string; nivel?: NivelKey; extra?: boolean; }
+export interface DirectorData {
+  nombre: string;
+  campaign: Campaign;
+  niveles: NivelKey[];
+  seriesNivel?: PorNivel;
+  inglesNivel?: PorNivel;
+  asesor: string | null;   // nombre del asesor pedagógico que lo atiende
+  servicios: ServicioDirector[];
+}
+
+export function datosDirector(c: Colegio, asesorNombre: string | null): DirectorData {
+  return {
+    nombre: c.nombre, campaign: c.campaign,
+    niveles: nivelesDeColegio(c),
+    seriesNivel: c.seriesNivel, inglesNivel: c.inglesNivel,
+    asesor: asesorNombre,
+    servicios: c.servicios.map((s) => ({
+      tipo: s.tipo, estatus: s.estatus, fechaPlan: s.fechaPlan, fechaReal: s.fechaReal, nivel: s.nivel, extra: s.extra,
+    })),
+  };
+}
+
+/** Convierte la respuesta del RPC psp_vista_director (jsonb con posibles null)
+ *  a DirectorData. Devuelve null si la forma no es la esperada (token inválido). */
+export function normalizarDirector(raw: unknown): DirectorData | null {
+  const r = raw as Partial<Record<keyof DirectorData, unknown>> | null;
+  if (!r || typeof r.nombre !== 'string' || !Array.isArray(r.servicios)) return null;
+  const seriesNivel = (r.seriesNivel ?? undefined) as PorNivel | undefined;
+  const inglesNivel = (r.inglesNivel ?? undefined) as PorNivel | undefined;
+  return {
+    nombre: r.nombre,
+    campaign: r.campaign === 'CORE' ? 'CORE' : 'SMART',
+    niveles: nivelesDeColegio({
+      niveles: (Array.isArray(r.niveles) ? r.niveles : []) as NivelKey[],
+      seriesNivel, inglesNivel,
+    }),
+    seriesNivel, inglesNivel,
+    asesor: typeof r.asesor === 'string' ? r.asesor : null,
+    servicios: (r.servicios as Record<string, unknown>[]).map((s) => ({
+      tipo: (s.tipo ?? 'uso') as ServTipo,
+      estatus: (s.estatus ?? 'pendiente') as Estatus,
+      fechaPlan: (s.fechaPlan ?? undefined) as string | undefined,
+      fechaReal: (s.fechaReal ?? undefined) as string | undefined,
+      nivel: (s.nivel ?? undefined) as NivelKey | undefined,
+      extra: (s.extra ?? undefined) as boolean | undefined,
+    })),
+  };
+}
+
+// ── Portal del ejecutivo comercial ────────────────────────────────────────────
+
+/** Colegios cuyo «Ejecutivo Responsable» (comercial) casa con este nombre (normalizado). */
+export function colegiosDeEjecutivo(colegios: Colegio[], ejecutivo: string): Colegio[] {
+  const key = normNombre(ejecutivo);
+  if (!key) return [];
+  return colegios.filter((c) => c.ejecutivo && normNombre(c.ejecutivo) === key);
+}
+
 export interface Carga { colegios: number; servicios: number; realizados: number; usoProf: number; }
 export function cargaAsesor(colegios: Colegio[], asesorId: string): Carga {
   let cols = 0, servicios = 0, realizados = 0, usoProf = 0;
@@ -327,6 +439,8 @@ export interface FilaColegio {
   asesorPed?: string;      // asesor pedagógico → se casa/crea como asesor y recibe el colegio
   antiguedad?: number;
   seriesNivel?: PorNivel; inglesNivel?: PorNivel; otraSerie?: string;
+  niveles?: NivelKey[];    // niveles escolares del colegio (columna «Niveles» o derivados)
+  contacto?: ContactoColegio;
 }
 
 export interface ImportResumen {
@@ -336,8 +450,8 @@ export interface ImportResumen {
   porCampaign: Record<Campaign, number>;
 }
 
-/** Nombre normalizado para casar ejecutivos con asesores (acentos/espacios/caja). */
-const normNombre = (s: string): string =>
+/** Nombre normalizado para casar personas por nombre (acentos/espacios/caja). */
+export const normNombre = (s: string): string =>
   s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
 
 const slug = (s: string): string => normNombre(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -386,6 +500,7 @@ export function importarColegios(data: PlaneacionData, filas: FilaColegio[]): { 
       idCrm: f.idCrm, clave: f.clave, valorReal: f.valorReal,
       gerencia: f.gerencia, ejecutivo: f.ejecutivo, antiguedad: f.antiguedad,
       seriesNivel: f.seriesNivel, inglesNivel: f.inglesNivel, otraSerie: f.otraSerie,
+      niveles: f.niveles, contacto: f.contacto,
     });
   }
 

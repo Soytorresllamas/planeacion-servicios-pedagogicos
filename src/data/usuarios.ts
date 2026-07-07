@@ -3,13 +3,14 @@
 // roles en la tabla psp_usuarios (RLS por rol). Aquí solo quedan tipos y
 // helpers PUROS testeables; las operaciones viven en lib/usuariosStore.ts.
 
-export type Rol = 'admin' | 'coordinador' | 'logistica' | 'asesor';
+export type Rol = 'admin' | 'coordinador' | 'logistica' | 'asesor' | 'ejecutivo';
 
 export const ROLES: { key: Rol; label: string; descripcion: string }[] = [
   { key: 'admin', label: 'Administrador', descripcion: 'Acceso a todo, incluida Administración' },
   { key: 'coordinador', label: 'Coordinador', descripcion: 'Planeación y Rentabilidad' },
   { key: 'logistica', label: 'Responsable Logística', descripcion: 'Planeación y Rentabilidad (captura costos)' },
   { key: 'asesor', label: 'Asesor', descripcion: 'Solo su hoja de colegios asignados' },
+  { key: 'ejecutivo', label: 'Ejecutivo Comercial', descripcion: 'Solo el estatus de SUS colegios (lectura)' },
 ];
 
 /** Perfil de usuario (espejo de la tabla psp_usuarios; el id es el uid de Auth). */
@@ -20,6 +21,7 @@ export interface Usuario {
   apellido: string;
   rol: Rol;
   asesorId?: string;       // rol asesor: liga con Asesor de planeación
+  ejecutivo?: string;      // rol ejecutivo: su nombre como viene en «Ejecutivo Responsable» del BI
   fechaIngreso?: string;   // ISO 'YYYY-MM-DD' (ingreso a SM)
   tempPassword: boolean;   // true → debe cambiarla al entrar
   activo: boolean;

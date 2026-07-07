@@ -32,6 +32,25 @@ describe('mapearFilas (archivo de BI → FilaColegio)', () => {
     });
   });
 
+  it('mapea niveles (columna o derivados de series) y el contacto del colegio', () => {
+    const { filas, errores } = mapearFilas([
+      { 'Nombre de Colegio': 'A', 'Campaña': 'SMART', 'Categoría de Colegio': 'Top',
+        'Niveles': 'Preescolar, Primaria y Bachillerato',
+        'Contacto Nombre': 'Gabriela R.', 'Contacto Rol': 'Directora', 'Contacto Teléfono': '55 1234', 'Contacto Correo': 'g@x.mx' },
+      // sin columna Niveles: se derivan de serie/inglés por nivel
+      { 'Nombre de Colegio': 'B', 'Campaña': 'CORE', 'Categoría de Colegio': 'Bajo',
+        'Serie Primaria': 'Revuela Up', 'Inglés Secundaria': 'Winglish' },
+      // sin nada: niveles/contacto quedan undefined
+      { 'Nombre de Colegio': 'C', 'Campaña': 'CORE', 'Categoría de Colegio': 'Bajo' },
+    ]);
+    expect(errores).toEqual([]);
+    expect(filas[0].niveles).toEqual(['pre', 'pri', 'bach']);
+    expect(filas[0].contacto).toEqual({ nombre: 'Gabriela R.', rol: 'Directora', telefono: '55 1234', correo: 'g@x.mx' });
+    expect(filas[1].niveles).toEqual(['pri', 'sec']);
+    expect(filas[1].contacto).toBeUndefined();
+    expect(filas[2].niveles).toBeUndefined();
+  });
+
   it('acepta variantes: minúsculas, sin acentos y categoría numerada', () => {
     const { filas, errores } = mapearFilas([
       { 'nombre': 'A', 'campana': 'core', 'categoria': 'MEDIO' },

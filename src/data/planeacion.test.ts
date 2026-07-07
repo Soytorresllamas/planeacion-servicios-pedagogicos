@@ -6,8 +6,10 @@ import {
   setServicio, renombrarColegio, renombrarAsesor, avanceAsignado, patchColegio,
   hoyISO, sumarDias, urgencia, agendaAsesor, serviciosDeAsesor,
   agregarAlerta, atenderAlerta,
+  nivelesDeColegio, agregarServicioExtra, quitarServicioExtra,
+  genTokenDirector, datosDirector, normalizarDirector, colegiosDeEjecutivo, normNombre,
 } from './planeacion';
-import type { Servicio } from './planeacion';
+import type { Servicio, Colegio } from './planeacion';
 
 const tierTop = { key: 'top' as const, label: 'Top', pct: 10, uso: 3, prof: 2, didac: 1 };
 
@@ -286,5 +288,102 @@ describe('setServicio / renombrarColegio', () => {
     expect(c.satisfaccion).toBe(4);
     expect(c.notasGenerales).toBe('Buen contacto');
     expect(cols[0].serie).toBeUndefined(); // original sin mutar
+  });
+});
+
+describe('niveles escolares', () => {
+  it('nivelesDeColegio usa los declarados si existen', () => {
+    expect(nivelesDeColegio({ niveles: ['pri', 'sec'] })).toEqual(['pri', 'sec']);
+  });
+
+  it('sin declarados, deriva de series/inglés por nivel (en orden pre→bach)', () => {
+    expect(nivelesDeColegio({ seriesNivel: { sec: 'Acierta' }, inglesNivel: { pre: 'Winglish' } })).toEqual(['pre', 'sec']);
+    expect(nivelesDeColegio({})).toEqual([]);
+  });
+});
+
+describe('talleres extra (coordinación)', () => {
+  const base = () => generateColegios(10, DEFAULTS.tiersSmart, 0, DEFAULTS.tiersCore);
+
+  it('agregarServicioExtra anexa un servicio marcado extra, pendiente y con nivel opcional', () => {
+    const cols = base();
+    const id = cols.find((c) => c.tier === 'top')!.id;
+    const next = agregarServicioExtra(cols, id, 'prof', 'sec');
+    const c = next.find((x) => x.id === id)!;
+    expect(c.servicios).toHaveLength(7); // Top trae 6
+    const nuevo = c.servicios[6];
+    expect(nuevo).toMatchObject({ tipo: 'prof', estatus: 'pendiente', extra: true, nivel: 'sec' });
+    expect(cols.find((x) => x.id === id)!.servicios).toHaveLength(6); // original sin mutar
+  });
+
+  it('quitarServicioExtra borra SOLO servicios extra; la matriz congelada no se toca', () => {
+    let cols = agregarServicioExtra(base(), 'SMART-top-001', 'uso');
+    const antes = cols.find((c) => c.id === 'SMART-top-001')!.servicios.length;
+    // intentar quitar un servicio de la matriz (idx 0, no extra) → intacto
+    cols = quitarServicioExtra(cols, 'SMART-top-001', 0);
+    expect(cols.find((c) => c.id === 'SMART-top-001')!.servicios).toHaveLength(antes);
+    // quitar el extra (último índice) sí lo borra
+    cols = quitarServicioExtra(cols, 'SMART-top-001', antes - 1);
+    expect(cols.find((c) => c.id === 'SMART-top-001')!.servicios).toHaveLength(antes - 1);
+    expect(cols.find((c) => c.id === 'SMART-top-001')!.servicios.every((s) => !s.extra)).toBe(true);
+  });
+
+  it('los extras cuentan en la carga del asesor (capacidad real)', () => {
+    let cols = asignar(base(), new Set(['SMART-top-001']), 'ase-1');
+    cols = agregarServicioExtra(cols, 'SMART-top-001', 'uso');
+    expect(cargaAsesor(cols, 'ase-1').servicios).toBe(7);
+    expect(cargaAsesor(cols, 'ase-1').usoProf).toBe(6);
+  });
+});
+
+describe('enlace y vista del director', () => {
+  it('genTokenDirector produce 32 hex distintos cada vez', () => {
+    const t1 = genTokenDirector(), t2 = genTokenDirector();
+    expect(t1).toMatch(/^[0-9a-f]{32}$/);
+    expect(t1).not.toBe(t2);
+  });
+
+  it('datosDirector expone SOLO lo público: nada de tier, costos, notas, satisfacción ni valor', () => {
+    const c: Colegio = {
+      id: 'x', nombre: 'Colegio Cumbres', campaign: 'SMART', tier: 'bajo', asesorId: 'ase-1',
+      servicios: [{ tipo: 'uso', estatus: 'realizado', fechaReal: '2026-09-01', nota: 'interna', costoExterno: 999, traslado: true, costoTraslado: 500 }],
+      satisfaccion: 2, notasGenerales: 'cliente difícil', valorReal: 123456, gerencia: 'Norte',
+      niveles: ['pri'], contacto: { nombre: 'Ana', telefono: '555' }, tokenDirector: 'abc',
+    };
+    const d = datosDirector(c, 'Laura Peña');
+    expect(d.nombre).toBe('Colegio Cumbres');
+    expect(d.asesor).toBe('Laura Peña');
+    expect(d.niveles).toEqual(['pri']);
+    expect(d.servicios[0]).toEqual({ tipo: 'uso', estatus: 'realizado', fechaPlan: undefined, fechaReal: '2026-09-01', nivel: undefined, extra: undefined });
+    const json = JSON.stringify(d);
+    for (const prohibido of ['bajo', 'interna', '999', '500', 'difícil', '123456', 'Norte', 'Ana', '555', 'abc', 'satisfaccion', 'tier', 'costo', 'valor'])
+      expect(json).not.toContain(prohibido);
+  });
+
+  it('normalizarDirector acepta el jsonb del RPC (null → undefined) y rechaza formas inválidas', () => {
+    const raw = {
+      nombre: 'Colegio X', campaign: 'CORE', niveles: [], seriesNivel: { pri: 'Acierta' }, inglesNivel: null,
+      asesor: null,
+      servicios: [{ tipo: 'prof', estatus: 'agendado', fechaPlan: '2026-09-10', fechaReal: null, nivel: null, extra: null }],
+    };
+    const d = normalizarDirector(raw)!;
+    expect(d.campaign).toBe('CORE');
+    expect(d.asesor).toBeNull();
+    expect(d.niveles).toEqual(['pri']);                 // derivados de seriesNivel
+    expect(d.servicios[0]).toEqual({ tipo: 'prof', estatus: 'agendado', fechaPlan: '2026-09-10', fechaReal: undefined, nivel: undefined, extra: undefined });
+    expect(normalizarDirector(null)).toBeNull();        // token inválido → RPC devuelve null
+    expect(normalizarDirector({ nombre: 'x' })).toBeNull();
+  });
+});
+
+describe('colegiosDeEjecutivo', () => {
+  const col = (id: string, ejecutivo?: string): Colegio =>
+    ({ id, nombre: id, campaign: 'SMART', tier: 'top', asesorId: null, servicios: [], ejecutivo });
+
+  it('casa por nombre normalizado (acentos, caja, espacios)', () => {
+    const cols = [col('a', 'María  LÓPEZ'), col('b', 'maria lopez'), col('c', 'Otro'), col('d')];
+    expect(colegiosDeEjecutivo(cols, 'Maria Lopez').map((c) => c.id)).toEqual(['a', 'b']);
+    expect(colegiosDeEjecutivo(cols, '')).toEqual([]);
+    expect(normNombre('  JOSÉ  Pérez ')).toBe('jose perez');
   });
 });

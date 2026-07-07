@@ -1,7 +1,9 @@
 # CONTEXTO — Planeación de Servicios Pedagógicos (V3)
 
 > Documento de recuperación de contexto. Léelo primero para retomar el proyecto
-> después de compactar la conversación. Estado al **2026-07-07**.
+> después de compactar la conversación. Estado al **2026-07-07** (V3.1: feedback
+> de usuarios — niveles, talleres extra, vista del director, portal del ejecutivo,
+> contacto por colegio).
 
 ---
 
@@ -33,7 +35,7 @@ Cubre: simular capacidad/costos, planear y ejecutar servicios por colegio, medir
 - **Vite + React + TypeScript** (strict), **HashRouter** (rutas con `#/`), **Recharts**, **Vitest**, ESLint flat.
 - **Supabase** para datos + **Auth** (identidad) + **RLS** (autorización). Cliente en `src/lib/supabase.ts`.
 - **GitHub Actions**: gate (lint+typecheck+test) → build → deploy a **GitHub Pages** en cada push a `main`.
-- **Rutas** (`src/App.tsx`, lazy con `lazyConReintento`): `/simulador`, `/planeacion`, `/rentabilidad`, `/administracion`, `/mi-hoja` (portal asesor), `/servicios` y `/documentos` (ocultas, solo admin).
+- **Rutas** (`src/App.tsx`, lazy con `lazyConReintento`): `/simulador`, `/planeacion`, `/rentabilidad`, `/administracion`, `/mi-hoja` (portal asesor), `/mis-colegios` (portal ejecutivo), `/vista-director/:id` (vista previa interna), `/servicios` y `/documentos` (ocultas, solo admin). **Fuera del login**: `#/director/<token>` (vista pública del director, resuelta en `main.tsx` antes del gate; en dev existe `#/director/demo`).
 - **Diseño**: sistema propio en `src/index.css` (variables CSS). Fuentes Newsreader (serif) + Hanken Grotesk (sans). Invariante de color: SMART=azul, CORE=teal, **nunca rojo en datos** (excepción documentada: gráfica 2 del Simulador). Componentes UI en `src/ui/` (NumberTicker, Seg animado, Toaster, Skeleton, ProgressRing).
 
 ### Comandos
@@ -84,11 +86,13 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 ## 5 · Funcionalidad por sección
 
 - **Simulador** (`Simulador.tsx`, modelo puro en `data/model.ts`): coberturas por mes, empleados vs externos, costos. 4 categorías de colegio (Top/Alto/Medio/Bajo) con matriz de servicios (uso/prof/didáctica). Uso/prof = internos si hay capacidad, si no externos; **didácticas siempre externas**.
-- **Planeación** (`Planeacion.tsx`): cupos, asignación de colegios a asesores, hoja de seguimiento (tarjeta `features/planeacion/ColegioCard.tsx` compartida con el portal), agenda, alertas. Guardas anti-lockout al renombrar asesores.
+- **Planeación** (`Planeacion.tsx`): cupos, asignación de colegios a asesores, hoja de seguimiento (tarjeta `features/planeacion/ColegioCard.tsx` compartida con el portal), agenda, alertas. Guardas anti-lockout al renombrar asesores. La tarjeta trae además: **niveles escolares** del colegio (chips; cada servicio puede indicar su nivel), **contacto** del colegio (nombre/rol/tel/correo), **talleres extra** de coordinación (+Uso/+Prof/+Didáctica, marcados EXTRA y quitables) y la gestión del **enlace del director**.
 - **Portal del asesor** (`HojaAsesor.tsx`, `#/mi-hoja`, móvil-first): su cartera, agenda, "caso crítico". El asesor entra directo a SU hoja (`sesion.asesorId`); admin/coord/logística lo ven como vista previa.
+- **Portal del ejecutivo comercial** (`MisColegios.tsx`, `#/mis-colegios`, SOLO lectura): estatus de los colegios que lo traen como «Ejecutivo Responsable» (match por nombre normalizado vía `colegiosDeEjecutivo`), con énfasis en comentarios/notas del asesor y alertas. Nunca guarda (sin `usePersistencia`, a propósito).
+- **Vista del director** (`Director.tsx` + `VistaDirectorPreview.tsx`): pantalla de avance para el CLIENTE FINAL. Coordinación genera por colegio un enlace `#/director/<token>` (32 hex, revocable/regenerable desde la tarjeta del colegio). El director la abre SIN cuenta: `main.tsx` la resuelve antes del gate y consulta el RPC público `psp_vista_director(token)` (security definer). **Nunca viajan** tier, costos, notas internas, satisfacción ni valor (forma definida por `datosDirector`/`normalizarDirector` en `data/planeacion.ts` y espejada en el SQL).
 - **Rentabilidad** (`Rentabilidad.tsx`): valor real vs costos (traslados + externos). Hoja logística para la **Responsable Logística** (captura costos, filtros por asesor/colegio/gerencia). Ejecutor derivado: didácticas siempre externas; uso/prof según asignación.
 - **Administración** (`Administracion.tsx`, solo admin): Colegios (carga masiva XLS/CSV de BI + valor del colegio), Catálogos (gerencias, ejecutivos comerciales), Usuarios (alta/rol/activo/recuperación), Uso (mapeo de ingresos), Respaldos.
-- **4 roles** (`src/lib/sesion.ts`): **admin** (todo), **coordinador** y **logistica** (Planeación+Rentabilidad), **asesor** (solo su hoja).
+- **5 roles** (`src/lib/sesion.ts`): **admin** (todo), **coordinador** y **logistica** (Planeación+Rentabilidad+vistas previas), **asesor** (solo su hoja), **ejecutivo** (solo `/mis-colegios`, lectura; ligado por `psp_usuarios.ejecutivo` = su nombre en «Ejecutivo Responsable»).
 
 ### Carga masiva de colegios (archivo de BI)
 - Plantilla oficial: `public/plantilla-colegios.xlsx` (genera `scripts/plantilla-colegios.mjs`), descargable desde la app. Parser en `src/lib/importColegios.ts`.
@@ -101,8 +105,12 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 
 **Hecho:** V3 completa, blindada (Auth+RLS), respaldos diarios, favicon, y el fix de recarga por caché de deploy. Backend **pristino** listo para datos reales. CI verde. ~91 pruebas.
 
-**Pendientes / próximos pasos (ninguno urgente):**
-1. **Cargar el catálogo real de BI** cuando lo entreguen (activa rentabilidad con valores reales).
+**Pendientes / próximos pasos:**
+0. ⚠ **Correr `supabase_actualizacion_v3_1.sql`** en el SQL Editor del dashboard (rol
+   «ejecutivo» + RPC `psp_vista_director`). Hasta entonces: no se pueden crear usuarios
+   ejecutivos (falla el CHECK de rol) y los enlaces del director muestran «no activo».
+1. **Cargar el catálogo real de BI** cuando lo entreguen (activa rentabilidad con valores
+   reales). La plantilla ya pide niveles y contacto del colegio.
 2. **Dar de alta al equipo** (coordinación, logística, asesores) desde Administración → Usuarios.
 3. **RLS granular** (futuro): partir el blob de planeación en filas por entidad para que, p. ej., un asesor solo escriba SUS servicios (hoy cualquier usuario activo edita el tablero completo).
 4. **Backups off-site**: al pasar Supabase a plan Pro, activar sus backups automáticos (colchón contra pérdida del proyecto entero).
@@ -116,4 +124,4 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 
 - `docs/01-modelo-y-simulador.md` · `docs/05-planeacion-servicios.md` · `docs/06-rentabilidad.md` · `docs/07-administracion-usuarios.md` (seguridad + respaldos) · `docs/04-infraestructura.md`
 - `PRESENTACION.md` — panorama divulgativo (base para presentaciones).
-- `supabase_setup.sql` (tablas base) + `supabase_blindaje.sql` (Auth + RLS; correr **después** del setup).
+- `supabase_setup.sql` (tablas base) + `supabase_blindaje.sql` (Auth + RLS; correr **después** del setup) + `supabase_actualizacion_v3_1.sql` (rol ejecutivo + vista pública del director; correr al final).

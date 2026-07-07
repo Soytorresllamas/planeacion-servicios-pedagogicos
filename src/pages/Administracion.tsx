@@ -199,6 +199,7 @@ export default function Administracion() {
   const [uFecha, setUFecha] = useState(hoyISO())
   const [uRol, setURol] = useState<Rol>('asesor')
   const [uAsesor, setUAsesor] = useState('nueva')  // 'nueva' | id de asesor existente
+  const [uEjecutivo, setUEjecutivo] = useState('') // rol ejecutivo: nombre como en «Ejecutivo Responsable»
   const [creando, setCreando] = useState(false)
   const [tempCreada, setTempCreada] = useState<{ nombre: string; correo: string; pass: string } | null>(null)
 
@@ -211,7 +212,11 @@ export default function Administracion() {
     e.preventDefault()
     setCreando(true)
     const asesorExistente = uRol === 'asesor' && uAsesor !== 'nueva' ? uAsesor : undefined
-    const r = await crearUsuario({ nombre: uNombre, apellido: uApellido, correo: uCorreo, fechaIngreso: uFecha, rol: uRol, asesorId: asesorExistente })
+    const r = await crearUsuario({
+      nombre: uNombre, apellido: uApellido, correo: uCorreo, fechaIngreso: uFecha, rol: uRol,
+      asesorId: asesorExistente,
+      ejecutivo: uRol === 'ejecutivo' ? uEjecutivo.trim() || undefined : undefined,
+    })
     if (!r.ok) { toast(r.error, 'err'); setCreando(false); return }
     let creado = r.usuario
     // rol asesor sin hoja existente → crea su hoja en planeación y la liga al perfil
@@ -223,7 +228,7 @@ export default function Administracion() {
     }
     setUsuarios((us) => [...us, creado])
     setTempCreada({ nombre: `${creado.nombre} ${creado.apellido}`, correo: creado.correo, pass: r.tempPassword })
-    setUNombre(''); setUApellido(''); setUCorreo(''); setUAsesor('nueva'); setCreando(false)
+    setUNombre(''); setUApellido(''); setUCorreo(''); setUAsesor('nueva'); setUEjecutivo(''); setCreando(false)
     toast(`Usuario creado: ${creado.correo}`, 'ok')
   }
 
@@ -457,8 +462,16 @@ export default function Administracion() {
                   {asesoresLibres.map((a) => <option key={a.id} value={a.id}>Ligar a: {a.nombre}</option>)}
                 </select></label>
             )}
+            {uRol === 'ejecutivo' && (
+              <label style={{ flex: '0 1 230px', margin: 0 }}>Nombre en «Ejecutivo Responsable»
+                <input value={uEjecutivo} onChange={(e) => setUEjecutivo(e.target.value)} list="dl-ejecutivos"
+                  placeholder="Tal como viene del BI" style={{ width: '100%', fontSize: 13, padding: '6px 8px', marginTop: 3 }} />
+                <datalist id="dl-ejecutivos">
+                  {catalogos.ejecutivos.map((ej) => <option key={ej} value={ej} />)}
+                </datalist></label>
+            )}
             <button className="gate-btn" type="submit" style={{ width: 'auto', padding: '9px 18px' }}
-              disabled={creando || !uNombre.trim() || !uApellido.trim() || !uCorreo.trim()}>{creando ? 'Creando…' : 'Crear con contraseña temporal'}</button>
+              disabled={creando || !uNombre.trim() || !uApellido.trim() || !uCorreo.trim() || (uRol === 'ejecutivo' && !uEjecutivo.trim())}>{creando ? 'Creando…' : 'Crear con contraseña temporal'}</button>
           </form>
           <div className="hint">La cuenta se crea en Supabase Auth con una contraseña temporal (se muestra una sola vez) y la persona debe cambiarla en su primer ingreso.</div>
         </div>
@@ -467,7 +480,7 @@ export default function Administracion() {
           <h3>Usuarios ({usuarios.length})</h3>
           {cargandoUsuarios ? <div className="hint">Cargando…</div> : (
           <table>
-            <thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Ingreso a SM</th><th>Hoja de asesor</th><th>Estado</th><th></th></tr></thead>
+            <thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Ingreso a SM</th><th>Vínculo</th><th>Estado</th><th></th></tr></thead>
             <tbody>
               {usuarios.map((u) => (
                 <tr key={u.id} style={{ opacity: u.activo ? 1 : 0.5 }}>
@@ -480,7 +493,7 @@ export default function Administracion() {
                     </select>
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>{fmtFecha(u.fechaIngreso)}</td>
-                  <td style={{ color: 'var(--mut)' }}>{u.rol === 'asesor' ? nombreAsesor(u.asesorId) : '—'}</td>
+                  <td style={{ color: 'var(--mut)' }}>{u.rol === 'asesor' ? nombreAsesor(u.asesorId) : u.rol === 'ejecutivo' ? (u.ejecutivo ?? '⚠ sin nombre de BI') : '—'}</td>
                   <td>
                     <button className="sec" style={{ fontSize: 11 }} onClick={() => alternarActivo(u)}>
                       {u.activo ? 'Activo' : 'Inactivo'}

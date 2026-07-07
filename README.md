@@ -6,10 +6,12 @@ Plataforma del ciclo completo de servicios pedagógicos SM 2026-2027 (campañas 
 
 - **Simulador** de coberturas y asesores: servicios por mes, empleados vs externos, retención vs conquista y **módulo de costos** (servicios + traslados).
 - **Servicios (streamgraph)** de perfiles de servicio (uso, profundización, didácticas específicas) para SMART y CORE.
-- **Planeación**: cupos, asignación a asesores, hojas de seguimiento y alertas.
+- **Planeación**: cupos, asignación a asesores, hojas de seguimiento, alertas, niveles escolares, contacto del colegio y **talleres extra** (casos de excepción).
 - **Portal del asesor** (móvil): su cartera, agenda y casos críticos.
+- **Portal del ejecutivo comercial** (solo lectura): el estatus de SUS colegios con énfasis en los comentarios y reportes del asesor.
+- **Vista del director** (enlace público por token, revocable): la pantalla de avance que ve el cliente final, sin cuenta y sin datos internos.
 - **Rentabilidad**: valor real vs costos capturados por la Responsable Logística.
-- **Administración**: carga masiva de colegios, valor del colegio, catálogos de gerencias y ejecutivos, usuarios (4 roles con contraseña temporal) y mapeo de uso.
+- **Administración**: carga masiva de colegios, valor del colegio, catálogos de gerencias y ejecutivos, usuarios (5 roles con contraseña temporal) y mapeo de uso.
 
 ## Ver en línea (GitHub Pages)
 
