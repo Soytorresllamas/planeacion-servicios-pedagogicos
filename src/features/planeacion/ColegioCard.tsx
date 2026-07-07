@@ -171,8 +171,12 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
                       {ESTATUS.map((e) => <option key={e} value={e}>{EST_LABEL[e]}</option>)}
                     </select>
                   </div>
-                  <button className="c-nota" title={s.nota ? 'Editar nota' : 'Agregar nota'} aria-label={s.nota ? 'Editar nota' : 'Agregar nota'}
-                    onClick={() => setNotaKey((k) => k === i ? null : i)}>✎</button>
+                  <button className={`c-nota${s.nota ? ' con-nota' : ''}`} title={s.nota ? 'Editar nota' : 'Agregar nota'} aria-label={s.nota ? 'Editar nota' : 'Agregar nota'}
+                    onClick={() => setNotaKey((k) => k === i ? null : i)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    </svg>
+                  </button>
                 </div>
                 {notaKey === i && (
                   <input value={s.nota ?? ''} autoFocus placeholder="Nota…"

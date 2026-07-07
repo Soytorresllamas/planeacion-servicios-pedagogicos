@@ -82,8 +82,13 @@ button:hover .card-chev{background:var(--line);border-color:var(--mut);}
 .serv-row .c-nivel{font-size:10.5px;padding:3px 20px 3px 7px;width:auto;min-width:52px;color:var(--mut);}
 .serv-row .c-nivel.con-valor{color:var(--ink-2);}
 .serv-row .c-estado{font-size:11px;padding:3px 20px 3px 7px;width:auto;min-width:96px;}
-/* Nota: amarillo (identidad de lápiz) + objetivo táctil de 44px (guía Apple), en todo tamaño. */
-.serv-row .c-nota{border:none;background:transparent;cursor:pointer;color:var(--gold);font-size:19px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;}
+/* Nota: botón circular dorado con lápiz SVG (mismo lenguaje que .card-chev).
+   Sin nota: fondo lavado que invita a apretar · Con nota: dorado sólido = «aquí hay nota». */
+.serv-row .c-nota{border:1px solid var(--gold-l);background:var(--gold-wash);color:var(--gold);cursor:pointer;width:30px;height:30px;padding:0;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .12s ease;}
+.serv-row .c-nota svg{width:15px;height:15px;display:block;}
+.serv-row .c-nota:hover{background:var(--gold-l);color:#6E5210;border-color:var(--gold);}
+.serv-row .c-nota.con-nota{background:var(--gold);border-color:var(--gold);color:#fff;}
+.serv-row .c-nota.con-nota:hover{background:#9A6F15;}
 @media(max-width:560px){
   .serv-row{grid-template-columns:20px 1fr auto;row-gap:6px;}
   .serv-row .c-chk{grid-column:1;grid-row:1;transform:scale(1.6);}
@@ -93,6 +98,8 @@ button:hover .card-chev{background:var(--line);border-color:var(--mut);}
   .serv-row .c-fecha input[type=date],.serv-row .c-nivel,.serv-row .c-estado{font-size:14px;min-height:38px;box-sizing:border-box;}
   .serv-row .c-fecha input[type=date]{width:126px;padding:6px 8px;}
   .serv-row .c-nivel,.serv-row .c-estado{padding:6px 24px 6px 9px;background-position:right 9px center;}
+  .serv-row .c-nota{width:44px;height:44px;}
+  .serv-row .c-nota svg{width:21px;height:21px;}
 }
 
 /* ── Piso tipográfico móvil para controles y clases sin token ──────────────── */
