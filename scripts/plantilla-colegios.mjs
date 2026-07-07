@@ -1,8 +1,12 @@
 // Genera public/plantilla-colegios.xlsx: la plantilla que llena Inteligencia de
 // Negocio para la carga masiva de colegios. Correr con: node scripts/plantilla-colegios.mjs
 import * as XLSX from 'xlsx';
+import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+
+// El build ESM de SheetJS (cdn.sheetjs.com) no auto-detecta fs en Node: hay que inyectarlo.
+XLSX.set_fs(fs);
 
 const HEADERS = [
   'Nombre de Colegio', 'ID en CRM', 'Clave de Colegio', 'Campaña', 'Categoría de Colegio',
