@@ -47,8 +47,11 @@ export interface Servicio {
   pdfTransporte?: string;  // path en Storage del PDF de la reserva de transporte
   pdfHotel?: string;       // path en Storage del PDF de la reserva de hotel
   // ── captura logística (módulo Rentabilidad; la llena la Responsable Logística) ──
-  traslado?: boolean;       // el servicio requirió traslado/viáticos
-  costoTraslado?: number;   // MXN; solo tiene sentido si traslado
+  traslado?: boolean;       // compat viejo: el servicio requirió traslado/viáticos
+  costoTraslado?: number;   // compat viejo: MXN; migra visualmente a transporte
+  costoTransporte?: number; // MXN; reserva/costo real de transporte
+  costoHotel?: number;      // MXN; reserva/costo real de hotel
+  costoViaticos?: number;   // MXN; viáticos asociados al servicio
   costoExterno?: number;    // MXN; honorarios cuando lo ejecuta un externo
   notaLog?: string;         // observación logística (proveedor, folio, etc.)
 }
@@ -629,9 +632,10 @@ export function ejecutorDe(s: Servicio, c: Colegio): Ejecutor {
   return s.tipo === 'didac' || !c.asesorId ? 'externo' : 'interno';
 }
 
-/** Costo real capturado de un servicio: traslado (si lo hubo) + honorarios externos. */
+/** Costo real capturado de un servicio: logística + honorarios externos. */
 export function costoServicio(s: Servicio): number {
-  return (s.traslado ? (s.costoTraslado ?? 0) : 0) + (s.costoExterno ?? 0);
+  const transporte = s.costoTransporte ?? (s.traslado ? (s.costoTraslado ?? 0) : 0);
+  return transporte + (s.costoHotel ?? 0) + (s.costoViaticos ?? 0) + (s.costoExterno ?? 0);
 }
 
 export interface RentColegio {

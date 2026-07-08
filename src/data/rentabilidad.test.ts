@@ -166,10 +166,12 @@ describe('rentabilidad', () => {
     expect(ejecutorDe(serv(), col({ asesorId: null }))).toBe('externo');
   });
 
-  it('costoServicio: el traslado solo cuenta si está marcado', () => {
+  it('costoServicio: suma logística nueva y conserva traslado viejo', () => {
     expect(costoServicio(serv({ traslado: true, costoTraslado: 1500 }))).toBe(1500);
     expect(costoServicio(serv({ traslado: false, costoTraslado: 1500 }))).toBe(0);
     expect(costoServicio(serv({ traslado: true, costoTraslado: 1500, costoExterno: 3750 }))).toBe(5250);
+    expect(costoServicio(serv({ costoTransporte: 1200, costoHotel: 2400, costoViaticos: 300, costoExterno: 3750 }))).toBe(7650);
+    expect(costoServicio(serv({ traslado: true, costoTraslado: 1500, costoTransporte: 1200 }))).toBe(1200);
     expect(costoServicio(serv())).toBe(0);
   });
 

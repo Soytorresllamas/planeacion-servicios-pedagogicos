@@ -87,6 +87,12 @@ export default function Logistica() {
   const setServ = (colegioId: string, idx: number, patch: Partial<Servicio>) =>
     setData((d) => ({ ...d, colegios: setServicio(d.colegios, colegioId, idx, patch) }))
 
+  const money = (v: number | undefined, on: (n: number | undefined) => void, ph = '$') => (
+    <input type="number" min={0} step={50} value={v ?? ''} placeholder={ph} aria-label="Monto"
+      onChange={(e) => on(e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)))}
+      style={{ width: 78, fontSize: 11.5, padding: '4px 6px' }} />
+  )
+
   // ── carga / reemplazo / quitar / ver PDFs ──
   const pedirArchivo = (colegioId: string, idx: number, tipo: TipoReserva, anterior?: string) => {
     pendienteRef.current = { colegioId, idx, tipo, anterior }
@@ -123,6 +129,9 @@ export default function Logistica() {
   const celdaReserva = (f: FilaViaje, tipo: TipoReserva) => {
     const requiere = tipo === 'hotel' ? f.servicio.reqHospedaje : f.servicio.reqViaje
     const path = tipo === 'hotel' ? f.servicio.pdfHotel : f.servicio.pdfTransporte
+    const costo = tipo === 'hotel' ? f.servicio.costoHotel : (f.servicio.costoTransporte ?? f.servicio.costoTraslado)
+    const setCosto = (n: number | undefined) => setServ(f.colegio.id, f.idx,
+      tipo === 'hotel' ? { costoHotel: n } : { costoTransporte: n, traslado: n !== undefined || f.servicio.traslado || f.servicio.reqViaje })
     if (!requiere && !path) return <span style={{ color: 'var(--faint)' }}>—</span>
     const clave = `${f.colegio.id}:${f.idx}:${tipo}`
     const cargando = ocupado === clave
@@ -142,9 +151,16 @@ export default function Logistica() {
         ) : (
           <Badge tone="warning">Pendiente</Badge>
         )}
+        {puedeCargar ? money(costo, setCosto) : costo ? <b>{costo.toLocaleString('es-MX')}</b> : null}
       </span>
     )
   }
+
+  const celdaViaticos = (f: FilaViaje) => (
+    puedeCargar
+      ? money(f.servicio.costoViaticos, (n) => setServ(f.colegio.id, f.idx, { costoViaticos: n }))
+      : f.servicio.costoViaticos ? <b>{f.servicio.costoViaticos.toLocaleString('es-MX')}</b> : <span style={{ color: 'var(--faint)' }}>—</span>
+  )
 
   return (
     <div>
@@ -202,7 +218,7 @@ export default function Logistica() {
           <table>
             <thead><tr>
               <th>Fecha</th><th>Colegio</th><th>Asesor</th><th>Servicio</th><th>Gerencia</th>
-              <th>Necesita</th><th>Estado</th><th>Transporte</th><th>Hotel</th>
+              <th>Necesita</th><th>Estado</th><th>Transporte</th><th>Hotel</th><th>Viáticos</th>
             </tr></thead>
             <tbody>
               {filas.map((f) => {
@@ -224,6 +240,7 @@ export default function Logistica() {
                     <td style={{ whiteSpace: 'nowrap' }}><Badge tone={e.tone}>{e.label}</Badge></td>
                     <td>{celdaReserva(f, 'transporte')}</td>
                     <td>{celdaReserva(f, 'hotel')}</td>
+                    <td>{celdaViaticos(f)}</td>
                   </tr>
                 )
               })}

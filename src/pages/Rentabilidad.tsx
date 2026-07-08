@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DEFAULTS } from '../data/model'
 import {
-  defaultPlaneacion, filasLogistica, agruparRent, rentabilidadColegio, setServicio,
+  defaultPlaneacion, filasLogistica, agruparRent, rentabilidadColegio, setServicio, costoServicio,
 } from '../data/planeacion'
 import type { PlaneacionData, Servicio, Colegio } from '../data/planeacion'
 import { loadLocal, loadRemote } from '../lib/planeacionStore'
@@ -117,8 +117,7 @@ export default function Rentabilidad() {
       (fGer === 'todos' || f.colegio.gerencia === fGer) &&
       (!q || f.colegio.nombre.toLowerCase().includes(q)))
   }, [data.colegios, fEst, fAse, fGer, busca])
-  const totalFiltrado = useMemo(() => filas.reduce((s, f) =>
-    s + (f.servicio.traslado ? (f.servicio.costoTraslado ?? 0) : 0) + (f.servicio.costoExterno ?? 0), 0), [filas])
+  const totalFiltrado = useMemo(() => filas.reduce((s, f) => s + costoServicio(f.servicio), 0), [filas])
 
   const money = (v: number | undefined, on: (n: number | undefined) => void, disabled = false, ph = '0') => (
     <input type="number" min={0} step={50} value={v ?? ''} placeholder={ph} disabled={disabled}
@@ -138,7 +137,7 @@ export default function Rentabilidad() {
       <PageHeader
         title="Rentabilidad"
         status={status}
-        description={<>Valor real de cada colegio contra el costo de sus servicios: traslados y ejecución por
+        description={<>Valor real de cada colegio contra el costo de sus servicios: transporte, hotel, viáticos y ejecución por
           externos (didácticas siempre; uso/profundización cuando no hay capacidad interna). La captura la hace la
           Responsable Logística en su hoja.</>}
       />
@@ -257,7 +256,7 @@ export default function Rentabilidad() {
               <table>
                 <thead><tr>
                   <th>Colegio</th><th>Asesor</th><th>Servicio</th><th>Estatus</th><th>Fecha</th><th>Ejecutor</th>
-                  <th title="¿Hubo traslado/viáticos?">Traslado</th><th>$ Traslado</th><th>$ Externo</th><th>Nota logística</th>
+                  <th>$ Transporte</th><th>$ Hotel</th><th>$ Viáticos</th><th>$ Externo</th><th>Nota logística</th>
                 </tr></thead>
                 <tbody>
                   {filas.slice(0, cap).map((f) => {
@@ -271,13 +270,9 @@ export default function Rentabilidad() {
                         <td style={{ color: s.estatus === 'realizado' ? 'var(--core)' : 'var(--mut)' }}>{EST_LABEL[s.estatus]}</td>
                         <td style={{ whiteSpace: 'nowrap', color: 'var(--mut)' }}>{s.fechaReal ?? s.fechaPlan ?? '—'}</td>
                         <td>{chipEjecutor(f.ejecutor)}</td>
-                        <td style={{ textAlign: 'center' }}>
-                          <input type="checkbox" checked={s.traslado ?? false} aria-label="Hubo traslado"
-                            onChange={(e) => setServ(f.colegio.id, f.idx, e.target.checked
-                              ? { traslado: true, costoTraslado: s.costoTraslado ?? DEFAULTS.costoTraslado }
-                              : { traslado: false })} />
-                        </td>
-                        <td>{money(s.costoTraslado, (n) => setServ(f.colegio.id, f.idx, { costoTraslado: n }), !s.traslado, String(DEFAULTS.costoTraslado))}</td>
+                        <td>{money(s.costoTransporte ?? (s.traslado ? s.costoTraslado : undefined), (n) => setServ(f.colegio.id, f.idx, { costoTransporte: n, traslado: n !== undefined || s.traslado }))}</td>
+                        <td>{money(s.costoHotel, (n) => setServ(f.colegio.id, f.idx, { costoHotel: n }))}</td>
+                        <td>{money(s.costoViaticos, (n) => setServ(f.colegio.id, f.idx, { costoViaticos: n }))}</td>
                         <td>{money(s.costoExterno, (n) => setServ(f.colegio.id, f.idx, { costoExterno: n }), f.ejecutor !== 'externo', String(DEFAULTS.costoDidac))}</td>
                         <td><input value={s.notaLog ?? ''} placeholder="Proveedor, folio…" aria-label="Nota logística"
                           onChange={(e) => setServ(f.colegio.id, f.idx, { notaLog: e.target.value || undefined })}
@@ -295,7 +290,7 @@ export default function Rentabilidad() {
             </div>
           )}
           <div className="hint" style={{ marginTop: 8 }}>
-            El costo de traslado solo cuenta si la casilla 🚗 está marcada (se sugiere {fmt(DEFAULTS.costoTraslado)}).
+            Transporte conserva costos viejos de traslado como base. Captura nuevos costos por Transporte, Hotel y Viáticos.
             «$ Externo» se habilita cuando el servicio lo ejecuta un externo: didácticas siempre, y uso/profundización
             de colegios sin asesor (sugerido {fmt(DEFAULTS.costoDidac)} por didáctica).
           </div>

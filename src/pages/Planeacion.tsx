@@ -82,7 +82,7 @@ export default function Planeacion() {
   }
   const quitarExtra = (colegioId: string, idx: number) =>
     setData((d) => ({ ...d, colegios: quitarServicioExtra(d.colegios, colegioId, idx) }))
-  // necesidad de viaje/hospedaje (módulo Logística); marcar viaje pre-marca traslado
+  // necesidad de viaje/hospedaje (módulo Logística); marcar viaje pre-marca transporte
   const marcarViaje = (colegioId: string, idx: number, patch: { reqViaje?: boolean; reqHospedaje?: boolean }) =>
     setData((d) => ({ ...d, colegios: marcarNecesidadViaje(d.colegios, colegioId, idx, patch) }))
 
@@ -465,7 +465,7 @@ export default function Planeacion() {
                                 <td style={{ padding: '2px 4px' }}>{inpReal(r.colegioId, r.idx, r.servicio)}</td>
                                 <td style={{ padding: '2px 4px', textAlign: 'center' }}>
                                   <input type="checkbox" checked={!!r.servicio.reqViaje} disabled={real} aria-label="Requiere viaje"
-                                    title={real ? 'Servicio ya realizado' : 'Requiere transporte: aparece en Logística (pre-marca traslado en Rentabilidad)'}
+                                    title={real ? 'Servicio ya realizado' : 'Requiere transporte: aparece en Logística (pre-marca transporte en Rentabilidad)'}
                                     onChange={(e) => marcarViaje(r.colegioId, r.idx, { reqViaje: e.target.checked })} />
                                 </td>
                                 <td style={{ padding: '2px 4px', textAlign: 'center' }}>
@@ -482,7 +482,7 @@ export default function Planeacion() {
                       </tbody>
                     </table>
                     <div className="hint">✈️/🏨: la responsable logística marca qué servicios agendados necesitan transporte u hospedaje;
-                      aparecen en <b>Logística</b> para que la responsable de viajes cargue las reservas. Marcar viaje pre-marca «traslado» en Rentabilidad.</div>
+                      aparecen en <b>Logística</b> para que la responsable de viajes cargue las reservas y costos. Marcar viaje pre-marca «Transporte» en Rentabilidad.</div>
                   </>)
                 })()
               )}
