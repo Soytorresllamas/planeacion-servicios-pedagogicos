@@ -151,6 +151,24 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
                       : onServ(i, { estatus: s.fechaPlan ? 'agendado' : 'pendiente', fechaReal: undefined })} />
                   <span className="c-label" style={{ fontSize: 'var(--fs-body)', fontWeight: 600, minWidth: 0, lineHeight: 1.2, overflowWrap: 'break-word' }}>
                     <ServLabel s={s} u={u} />
+                    {(s.reqViaje || s.reqHospedaje || s.pdfTransporte || s.pdfHotel) && (
+                      <span className="c-reservas">
+                        {(s.reqViaje || s.pdfTransporte) && (s.pdfTransporte ? (
+                          <Button type="button" size="sm" title="Abrir el PDF de tu reserva de transporte"
+                            onClick={() => void abrirReserva(s.pdfTransporte!)}>Transporte</Button>
+                        ) : (
+                          <span title="Requiere transporte; la reserva está en trámite"
+                            style={{ display: 'inline-flex' }}><Badge tone="warning">Transporte</Badge></span>
+                        ))}
+                        {(s.reqHospedaje || s.pdfHotel) && (s.pdfHotel ? (
+                          <Button type="button" size="sm" title="Abrir el PDF de tu reserva de hotel"
+                            onClick={() => void abrirReserva(s.pdfHotel!)}>Hotel</Button>
+                        ) : (
+                          <span title="Requiere hospedaje; la reserva está en trámite"
+                            style={{ display: 'inline-flex' }}><Badge tone="warning">Hotel</Badge></span>
+                        ))}
+                      </span>
+                    )}
                     {s.extra && onQuitarExtra && (
                       <button title="Quitar este taller extra" aria-label="Quitar taller extra"
                         onClick={() => { if (window.confirm('¿Quitar este taller extra? Su avance y notas se pierden.')) onQuitarExtra(i) }}
@@ -182,33 +200,13 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
                   </button>
                 </div>
                 {notaKey === i && (
-                  <input value={s.nota ?? ''} autoFocus placeholder="Nota…"
+                  <textarea className="c-nota-edit" value={s.nota ?? ''} autoFocus placeholder="Nota..."
                     onChange={(e) => onServ(i, { nota: e.target.value || undefined })}
                     onBlur={() => setNotaKey(null)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setNotaKey(null) }}
-                    style={{ width: '100%', fontSize: 'var(--fs-input)', padding: '5px 6px', marginTop: 4, boxSizing: 'border-box' }} />
+                    onKeyDown={(e) => { if (e.key === 'Escape') setNotaKey(null) }} />
                 )}
                 {notaKey !== i && s.nota && (
-                  <div onClick={() => setNotaKey(i)} title="Clic para editar" style={{ fontSize: 'var(--fs-meta)', color: 'var(--mut)', fontStyle: 'italic', cursor: 'pointer', marginTop: 3, paddingLeft: 28 }}>“{s.nota}”</div>
-                )}
-                {/* reservas de viaje/hospedaje (módulo Logística): el asesor abre sus PDFs aquí */}
-                {(s.reqViaje || s.reqHospedaje || s.pdfTransporte || s.pdfHotel) && (
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 3, paddingLeft: 28 }}>
-                    {(s.reqViaje || s.pdfTransporte) && (s.pdfTransporte ? (
-                      <Button type="button" size="sm" title="Abrir el PDF de tu reserva de transporte"
-                        onClick={() => void abrirReserva(s.pdfTransporte!)}>Transporte</Button>
-                    ) : (
-                      <span title="Requiere transporte; la reserva está en trámite"
-                        style={{ display: 'inline-flex' }}><Badge tone="warning">Viaje en trámite</Badge></span>
-                    ))}
-                    {(s.reqHospedaje || s.pdfHotel) && (s.pdfHotel ? (
-                      <Button type="button" size="sm" title="Abrir el PDF de tu reserva de hotel"
-                        onClick={() => void abrirReserva(s.pdfHotel!)}>Hotel</Button>
-                    ) : (
-                      <span title="Requiere hospedaje; la reserva está en trámite"
-                        style={{ display: 'inline-flex' }}><Badge tone="warning">Hospedaje en trámite</Badge></span>
-                    ))}
-                  </div>
+                  <div className="c-nota-text" onClick={() => setNotaKey(i)} title="Clic para editar">{s.nota}</div>
                 )}
               </Fragment>
             )
