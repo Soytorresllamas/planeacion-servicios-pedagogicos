@@ -4,6 +4,7 @@ import {
 } from 'recharts'
 import { MONTHS, STREAMS, DEF_CURVES, DEFAULTS, genCurve, compute, R } from '../data/model'
 import type { Curves, Defaults, ComputeKpis, Tier } from '../data/model'
+import { ESCENARIOS_VACIOS, LS_SIM_ESCENARIOS, normalizarEscenariosGuardados } from '../data/simuladorEscenarios'
 
 const SMART = '#2563B0', CORE = '#2C8A7B', BLUEL = '#9BBFE8', GOLD = '#B5841C'
 // Intensidad por tipo de servicio: uso (oscuro) → profundización (medio) → didácticas (claro).
@@ -85,18 +86,16 @@ function TierMatrix({ title, color, total, tiers, onTotal, onCell }: TierMatrixP
   )
 }
 
-interface Scenarios { A: ComputeKpis | null; B: ComputeKpis | null }
-
 export default function Simulador() {
   const initN = (): Defaults => ({ ...DEFAULTS, tiersSmart: DEFAULTS.tiersSmart.map((t) => ({ ...t })), tiersCore: DEFAULTS.tiersCore.map((t) => ({ ...t })) })
   const [n, setN] = useState<Defaults>(initN)
   const [curves, setCurves] = useState<Curves>(() => JSON.parse(JSON.stringify(DEF_CURVES)))
   const [shapes, setShapes] = useState(() => STREAMS.map((s) => ({ focal: s.focal, spread: s.spread })))
-  const [scen, setScen] = useState<Scenarios>(() => {
-    try { const r = localStorage.getItem('sm-sim-scen-v1'); if (r) return JSON.parse(r) } catch { /* noop */ }
-    return { A: null, B: null }
+  const [scen, setScen] = useState(() => {
+    try { return normalizarEscenariosGuardados(localStorage.getItem(LS_SIM_ESCENARIOS)) } catch { /* noop */ }
+    return ESCENARIOS_VACIOS
   })
-  useEffect(() => { try { localStorage.setItem('sm-sim-scen-v1', JSON.stringify(scen)) } catch { /* noop */ } }, [scen])
+  useEffect(() => { try { localStorage.setItem(LS_SIM_ESCENARIOS, JSON.stringify(scen)) } catch { /* noop */ } }, [scen])
 
   const set = (key: keyof Defaults, v: number) => setN((p) => ({ ...p, [key]: v }))
   const setTier = (which: 'tiersSmart' | 'tiersCore', idx: number, field: 'pct' | 'uso' | 'prof' | 'didac', v: number) =>
