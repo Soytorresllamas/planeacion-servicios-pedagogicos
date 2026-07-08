@@ -13,6 +13,13 @@ import { usePersistenciaPlaneacion } from '../lib/persistenciaPlaneacion'
 import { SMART, CORE, EST_LABEL, SERV_LABEL, tierLabel } from '../features/planeacion/colors'
 import { NumberTicker } from '../ui/NumberTicker'
 import { Seg } from '../ui/Seg'
+import { PageHeader } from '../ui/PageHeader'
+import { KpiCard } from '../ui/KpiCard'
+import { FilterBar, FilterCount } from '../ui/FilterBar'
+import { DataTable } from '../ui/DataTable'
+import { EmptyState } from '../ui/EmptyState'
+import { Button } from '../ui/Button'
+import { Badge } from '../ui/Badge'
 
 const mxn = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 })
 const fmt = (n: number | null | undefined): string => (n === null || n === undefined ? '—' : mxn.format(n))
@@ -120,10 +127,7 @@ export default function Rentabilidad() {
   )
 
   const chipEjecutor = (e: 'interno' | 'externo') => (
-    <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 8, whiteSpace: 'nowrap',
-      background: e === 'interno' ? '#E8F0FA' : '#F6EBCB', color: e === 'interno' ? 'var(--smart)' : '#8A6D1C' }}>
-      {e === 'interno' ? 'Interno' : 'Externo'}
-    </span>
+    <Badge tone={e === 'interno' ? 'smart' : 'warning'}>{e === 'interno' ? 'Interno' : 'Externo'}</Badge>
   )
 
   const margenStyle = (m: number | null) =>
@@ -131,17 +135,20 @@ export default function Rentabilidad() {
 
   return (
     <div>
-      <h1>Rentabilidad</h1>
-      <div className="sub">Valor real de cada colegio contra el costo de sus servicios: traslados y ejecución por
-        externos (didácticas siempre; uso/profundización cuando no hay capacidad interna). La captura la hace la
-        Responsable Logística en su hoja. <b>· {status}</b></div>
+      <PageHeader
+        title="Rentabilidad"
+        status={status}
+        description={<>Valor real de cada colegio contra el costo de sus servicios: traslados y ejecución por
+          externos (didácticas siempre; uso/profundización cuando no hay capacidad interna). La captura la hace la
+          Responsable Logística en su hoja.</>}
+      />
 
       <div className="kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10, marginBottom: 12 }}>
-        <div className="kpi"><div className="v">{global.conValor ? <NumberTicker value={global.valor} format={(n) => mxn.format(n)} /> : '—'}</div><div className="l">Valor de cartera ({global.conValor} colegios con valor)</div></div>
-        <div className="kpi"><div className="v"><NumberTicker value={global.costo} format={(n) => mxn.format(n)} /></div><div className="l">Costo capturado ({global.conCosto} servicios)</div></div>
-        <div className="kpi good"><div className="v" style={margenStyle(global.conValor ? global.margen : null)}>{global.conValor ? <NumberTicker value={global.margen} format={(n) => mxn.format(n)} /> : '—'}</div><div className="l">Margen</div></div>
-        <div className="kpi"><div className="v">{pctRent === null ? '—' : <NumberTicker value={pctRent} format={(n) => `${n.toFixed(1)}%`} />}</div><div className="l">Rentabilidad</div></div>
-        <div className="kpi"><div className="v"><NumberTicker value={global.servicios ? (global.externos / global.servicios) * 100 : 0} format={(n) => `${Math.round(n)}%`} /></div><div className="l">Servicios de externos</div></div>
+        <KpiCard value={global.conValor ? <NumberTicker value={global.valor} format={(n) => mxn.format(n)} /> : '—'} label={`Valor de cartera (${global.conValor} colegios con valor)`} />
+        <KpiCard value={<NumberTicker value={global.costo} format={(n) => mxn.format(n)} />} label={`Costo capturado (${global.conCosto} servicios)`} />
+        <KpiCard tone={global.conValor && global.margen < 0 ? 'danger' : 'good'} value={global.conValor ? <NumberTicker value={global.margen} format={(n) => mxn.format(n)} /> : '—'} label="Margen" />
+        <KpiCard value={pctRent === null ? '—' : <NumberTicker value={pctRent} format={(n) => `${n.toFixed(1)}%`} />} label="Rentabilidad" />
+        <KpiCard value={<NumberTicker value={global.servicios ? (global.externos / global.servicios) * 100 : 0} format={(n) => `${Math.round(n)}%`} />} label="Servicios de externos" />
       </div>
 
       {global.conValor === 0 && (
@@ -157,57 +164,64 @@ export default function Rentabilidad() {
 
       {view === 'analisis' && (<>
         <div className="panel">
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
-            <h3 style={{ margin: 0, flex: 1 }}>Agregado</h3>
+          <FilterBar>
+            <h3 style={{ margin: 0 }}>Agregado</h3>
             <Seg maxWidth={560} style={{ margin: 0, flex: '1 1 320px' }} value={grupo} onChange={setGrupo}
               options={GRUPOS.map((g) => ({ key: g.key, label: g.label }))} />
-          </div>
-          <table>
-            <thead><tr><th>{GRUPOS.find((g) => g.key === grupo)?.label.replace('Por ', '')}</th><th>Colegios</th><th>Valor</th><th>Costo</th><th>Margen</th><th>Rent.</th><th>Realizados</th></tr></thead>
-            <tbody>
-              {grupos.map((g) => {
-                const pct = g.valor ? (g.margen / g.valor) * 100 : null
-                return (
-                  <tr key={g.key}>
-                    <td style={{ fontWeight: 600 }}>{g.label}{g.sinValor > 0 && <span title={`${g.sinValor} colegios sin Valor Real (fuera del margen)`} style={{ color: 'var(--faint)', fontWeight: 400 }}> · {g.sinValor} s/valor</span>}</td>
-                    <td>{g.colegios}</td>
-                    <td>{fmt(g.colegios > g.sinValor ? g.valor : null)}</td>
-                    <td>{g.costo ? fmt(g.costo) : '—'}</td>
-                    <td style={margenStyle(g.colegios > g.sinValor ? g.margen : null)}>{fmt(g.colegios > g.sinValor ? g.margen : null)}</td>
-                    <td>{pct === null ? '—' : `${pct.toFixed(1)}%`}</td>
-                    <td style={{ color: 'var(--mut)' }}>{g.realizados}/{g.servicios}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          </FilterBar>
+          <DataTable>
+            <table>
+              <thead><tr><th>{GRUPOS.find((g) => g.key === grupo)?.label.replace('Por ', '')}</th><th>Colegios</th><th>Valor</th><th>Costo</th><th>Margen</th><th>Rent.</th><th>Realizados</th></tr></thead>
+              <tbody>
+                {grupos.map((g) => {
+                  const pct = g.valor ? (g.margen / g.valor) * 100 : null
+                  return (
+                    <tr key={g.key}>
+                      <td style={{ fontWeight: 600 }}>{g.label}{g.sinValor > 0 && <span title={`${g.sinValor} colegios sin Valor Real (fuera del margen)`} style={{ color: 'var(--faint)', fontWeight: 400 }}> · {g.sinValor} s/valor</span>}</td>
+                      <td>{g.colegios}</td>
+                      <td>{fmt(g.colegios > g.sinValor ? g.valor : null)}</td>
+                      <td>{g.costo ? fmt(g.costo) : '—'}</td>
+                      <td style={margenStyle(g.colegios > g.sinValor ? g.margen : null)}>{fmt(g.colegios > g.sinValor ? g.margen : null)}</td>
+                      <td>{pct === null ? '—' : `${pct.toFixed(1)}%`}</td>
+                      <td style={{ color: 'var(--mut)' }}>{g.realizados}/{g.servicios}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </DataTable>
         </div>
 
         <div className="panel">
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
-            <h3 style={{ margin: 0, flex: 1 }}>Por colegio</h3>
+          <FilterBar trailing={<FilterCount>{porColegio.length} visibles</FilterCount>}>
+            <h3 style={{ margin: 0 }}>Por colegio</h3>
             <input value={buscaCol} onChange={(e) => setBuscaCol(e.target.value)} placeholder="🔍 Buscar colegio…"
-              aria-label="Buscar colegio" style={{ width: 180, fontSize: 12, padding: '5px 8px' }} />
-          </div>
+              aria-label="Buscar colegio" style={{ width: 180 }} />
+          </FilterBar>
           {porColegio.length === 0 ? (
-            <div className="hint">Aún no hay colegios con Valor Real ni costos capturados{buscaCol && ' que coincidan con la búsqueda'}.</div>
+            <EmptyState
+              title="Sin colegios para mostrar"
+              detail={`Aún no hay colegios con Valor Real ni costos capturados${buscaCol ? ' que coincidan con la búsqueda' : ''}.`}
+            />
           ) : (
-            <table>
-              <thead><tr><th>Colegio</th><th>Gerencia</th><th>Asesor</th><th>Valor</th><th>Costo</th><th>Margen</th><th>Rent.</th></tr></thead>
-              <tbody>
-                {porColegio.map(({ c, r }) => (
-                  <tr key={c.id}>
-                    <td><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 8, marginRight: 6, background: c.campaign === 'SMART' ? SMART : CORE }} />{c.nombre}</td>
-                    <td style={{ color: 'var(--mut)' }}>{c.gerencia ?? '—'}</td>
-                    <td style={{ color: 'var(--mut)' }}>{nombreAsesor(c.asesorId)}</td>
-                    <td>{fmt(r.valor)}</td>
-                    <td>{r.costo ? fmt(r.costo) : '—'}</td>
-                    <td style={margenStyle(r.margen)}>{fmt(r.margen)}</td>
-                    <td>{r.pct === null ? '—' : `${r.pct.toFixed(1)}%`}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable>
+              <table>
+                <thead><tr><th>Colegio</th><th>Gerencia</th><th>Asesor</th><th>Valor</th><th>Costo</th><th>Margen</th><th>Rent.</th></tr></thead>
+                <tbody>
+                  {porColegio.map(({ c, r }) => (
+                    <tr key={c.id}>
+                      <td><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 8, marginRight: 6, background: c.campaign === 'SMART' ? SMART : CORE }} />{c.nombre}</td>
+                      <td style={{ color: 'var(--mut)' }}>{c.gerencia ?? '—'}</td>
+                      <td style={{ color: 'var(--mut)' }}>{nombreAsesor(c.asesorId)}</td>
+                      <td>{fmt(r.valor)}</td>
+                      <td>{r.costo ? fmt(r.costo) : '—'}</td>
+                      <td style={margenStyle(r.margen)}>{fmt(r.margen)}</td>
+                      <td>{r.pct === null ? '—' : `${r.pct.toFixed(1)}%`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </DataTable>
           )}
           <div className="hint">Se muestran hasta 40 colegios (los de mayor costo primero). Usa la búsqueda para encontrar uno específico.</div>
         </div>
@@ -215,10 +229,10 @@ export default function Rentabilidad() {
 
       {view === 'logistica' && (
         <div className="panel">
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
-            <h3 style={{ margin: 0, flex: '1 0 100%' }}>Hoja logística · captura de costos</h3>
+          <h3>Hoja logística · captura de costos</h3>
+          <FilterBar trailing={<FilterCount>{filas.length.toLocaleString('es-MX')} servicios · costo filtrado <b>{fmt(totalFiltrado)}</b></FilterCount>}>
             <input value={busca} onChange={(e) => { setBusca(e.target.value); setCap(PASO) }} placeholder="🔍 Colegio…"
-              aria-label="Filtrar por colegio" style={{ width: 160, fontSize: 12, padding: '5px 8px' }} />
+              aria-label="Filtrar por colegio" style={{ width: 160 }} />
             <select value={fAse} onChange={(e) => { setFAse(e.target.value); setCap(PASO) }} aria-label="Filtrar por asesor" style={{ width: 'auto' }}>
               <option value="todos">Todos los asesores</option>
               <option value="sin">Sin asignar (externos)</option>
@@ -234,47 +248,50 @@ export default function Rentabilidad() {
               <option value="agendado">Agendados</option>
               <option value="pendiente">Pendientes</option>
             </select>
-            <span style={{ fontSize: 12, color: 'var(--mut)', marginLeft: 'auto' }}>
-              {filas.length.toLocaleString('es-MX')} servicios · costo filtrado <b>{fmt(totalFiltrado)}</b>
-            </span>
-          </div>
+          </FilterBar>
 
-          <table>
-            <thead><tr>
-              <th>Colegio</th><th>Asesor</th><th>Servicio</th><th>Estatus</th><th>Fecha</th><th>Ejecutor</th>
-              <th title="¿Hubo traslado/viáticos?">🚗</th><th>$ Traslado</th><th>$ Externo</th><th>Nota logística</th>
-            </tr></thead>
-            <tbody>
-              {filas.slice(0, cap).map((f) => {
-                const s = f.servicio
-                return (
-                  <tr key={f.colegio.id + ':' + f.idx}>
-                    <td><span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 7, marginRight: 5, background: f.colegio.campaign === 'SMART' ? SMART : CORE }} />
-                      {f.colegio.nombre}{f.colegio.gerencia && <span style={{ display: 'block', fontSize: 9.5, color: 'var(--faint)' }}>{f.colegio.gerencia}</span>}</td>
-                    <td style={{ color: 'var(--mut)' }}>{nombreAsesor(f.colegio.asesorId)}</td>
-                    <td>{SERV_LABEL[s.tipo]}</td>
-                    <td style={{ color: s.estatus === 'realizado' ? 'var(--core)' : 'var(--mut)' }}>{EST_LABEL[s.estatus]}</td>
-                    <td style={{ whiteSpace: 'nowrap', color: 'var(--mut)' }}>{s.fechaReal ?? s.fechaPlan ?? '—'}</td>
-                    <td>{chipEjecutor(f.ejecutor)}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <input type="checkbox" checked={s.traslado ?? false} aria-label="Hubo traslado"
-                        onChange={(e) => setServ(f.colegio.id, f.idx, e.target.checked
-                          ? { traslado: true, costoTraslado: s.costoTraslado ?? DEFAULTS.costoTraslado }
-                          : { traslado: false })} />
-                    </td>
-                    <td>{money(s.costoTraslado, (n) => setServ(f.colegio.id, f.idx, { costoTraslado: n }), !s.traslado, String(DEFAULTS.costoTraslado))}</td>
-                    <td>{money(s.costoExterno, (n) => setServ(f.colegio.id, f.idx, { costoExterno: n }), f.ejecutor !== 'externo', String(DEFAULTS.costoDidac))}</td>
-                    <td><input value={s.notaLog ?? ''} placeholder="Proveedor, folio…" aria-label="Nota logística"
-                      onChange={(e) => setServ(f.colegio.id, f.idx, { notaLog: e.target.value || undefined })}
-                      style={{ width: 130, fontSize: 11, padding: '3px 5px' }} /></td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          {filas.length === 0 ? (
+            <EmptyState title="Sin servicios" detail="Ningun servicio coincide con los filtros actuales." />
+          ) : (
+            <DataTable>
+              <table>
+                <thead><tr>
+                  <th>Colegio</th><th>Asesor</th><th>Servicio</th><th>Estatus</th><th>Fecha</th><th>Ejecutor</th>
+                  <th title="¿Hubo traslado/viáticos?">Traslado</th><th>$ Traslado</th><th>$ Externo</th><th>Nota logística</th>
+                </tr></thead>
+                <tbody>
+                  {filas.slice(0, cap).map((f) => {
+                    const s = f.servicio
+                    return (
+                      <tr key={f.colegio.id + ':' + f.idx}>
+                        <td><span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 7, marginRight: 5, background: f.colegio.campaign === 'SMART' ? SMART : CORE }} />
+                          {f.colegio.nombre}{f.colegio.gerencia && <span style={{ display: 'block', fontSize: 9.5, color: 'var(--faint)' }}>{f.colegio.gerencia}</span>}</td>
+                        <td style={{ color: 'var(--mut)' }}>{nombreAsesor(f.colegio.asesorId)}</td>
+                        <td>{SERV_LABEL[s.tipo]}</td>
+                        <td style={{ color: s.estatus === 'realizado' ? 'var(--core)' : 'var(--mut)' }}>{EST_LABEL[s.estatus]}</td>
+                        <td style={{ whiteSpace: 'nowrap', color: 'var(--mut)' }}>{s.fechaReal ?? s.fechaPlan ?? '—'}</td>
+                        <td>{chipEjecutor(f.ejecutor)}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <input type="checkbox" checked={s.traslado ?? false} aria-label="Hubo traslado"
+                            onChange={(e) => setServ(f.colegio.id, f.idx, e.target.checked
+                              ? { traslado: true, costoTraslado: s.costoTraslado ?? DEFAULTS.costoTraslado }
+                              : { traslado: false })} />
+                        </td>
+                        <td>{money(s.costoTraslado, (n) => setServ(f.colegio.id, f.idx, { costoTraslado: n }), !s.traslado, String(DEFAULTS.costoTraslado))}</td>
+                        <td>{money(s.costoExterno, (n) => setServ(f.colegio.id, f.idx, { costoExterno: n }), f.ejecutor !== 'externo', String(DEFAULTS.costoDidac))}</td>
+                        <td><input value={s.notaLog ?? ''} placeholder="Proveedor, folio…" aria-label="Nota logística"
+                          onChange={(e) => setServ(f.colegio.id, f.idx, { notaLog: e.target.value || undefined })}
+                          style={{ width: 130, fontSize: 11, padding: '3px 5px' }} /></td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </DataTable>
+          )}
           {filas.length > cap && (
             <div style={{ textAlign: 'center', marginTop: 10 }}>
-              <button className="sec" onClick={() => setCap((c) => c + PASO)}>Mostrar {Math.min(PASO, filas.length - cap)} más ({(filas.length - cap).toLocaleString('es-MX')} restantes)</button>
+              <Button type="button" onClick={() => setCap((c) => c + PASO)}>Mostrar {Math.min(PASO, filas.length - cap)} más ({(filas.length - cap).toLocaleString('es-MX')} restantes)</Button>
             </div>
           )}
           <div className="hint" style={{ marginTop: 8 }}>

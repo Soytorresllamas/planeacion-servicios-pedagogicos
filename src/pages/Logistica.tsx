@@ -17,13 +17,20 @@ import { useAcceso } from '../lib/accesoCtx'
 import { NumberTicker } from '../ui/NumberTicker'
 import { toast } from '../ui/toastBus'
 import { SMART, CORE, SERV_LABEL } from '../features/planeacion/colors'
+import { PageHeader } from '../ui/PageHeader'
+import { KpiCard } from '../ui/KpiCard'
+import { FilterBar, FilterCount } from '../ui/FilterBar'
+import { DataTable } from '../ui/DataTable'
+import { EmptyState } from '../ui/EmptyState'
+import { Button } from '../ui/Button'
+import { Badge } from '../ui/Badge'
 
 const fmtCorta = (iso?: string) => iso ? iso.slice(5, 10).split('-').reverse().join('/') : '—'
 
-const EST_RES: Record<EstadoReserva, { label: string; color: string; bg: string }> = {
-  pendiente: { label: '⏳ Pendiente', color: '#8A6D1C', bg: 'var(--gold-wash)' },
-  parcial: { label: '◐ Parcial', color: '#8A6D1C', bg: 'var(--gold-wash)' },
-  completa: { label: '✓ Completa', color: 'var(--green)', bg: 'var(--green-wash)' },
+const EST_RES: Record<EstadoReserva, { label: string; tone: 'warning' | 'success' }> = {
+  pendiente: { label: 'Pendiente', tone: 'warning' },
+  parcial: { label: 'Parcial', tone: 'warning' },
+  completa: { label: 'Completa', tone: 'success' },
 }
 
 export default function Logistica() {
@@ -122,18 +129,18 @@ export default function Logistica() {
     return (
       <span style={{ display: 'flex', gap: 4, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         {path ? (<>
-          <button className="sec" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => void verPdf(path)}>📄 Ver</button>
+          <Button type="button" size="sm" onClick={() => void verPdf(path)}>Ver</Button>
           {puedeCargar && (<>
-            <button className="sec" style={{ fontSize: 11, padding: '3px 8px' }} disabled={cargando}
-              onClick={() => pedirArchivo(f.colegio.id, f.idx, tipo, path)}>{cargando ? '…' : 'Reemplazar'}</button>
-            <button className="sec" style={{ fontSize: 11, padding: '3px 8px' }} title="Quitar PDF"
-              onClick={() => quitarPdf(f.colegio.id, f.idx, tipo, path)}>×</button>
+            <Button type="button" size="sm" disabled={cargando}
+              onClick={() => pedirArchivo(f.colegio.id, f.idx, tipo, path)}>{cargando ? '...' : 'Reemplazar'}</Button>
+            <Button type="button" size="sm" variant="ghost" title="Quitar PDF" aria-label="Quitar PDF"
+              onClick={() => quitarPdf(f.colegio.id, f.idx, tipo, path)}>x</Button>
           </>)}
         </>) : puedeCargar ? (
-          <button className="sec" style={{ fontSize: 11, padding: '3px 8px', borderColor: 'var(--gold-l)', color: '#8A6D1C' }} disabled={cargando}
-            onClick={() => pedirArchivo(f.colegio.id, f.idx, tipo)}>{cargando ? 'Subiendo…' : '📎 Cargar PDF'}</button>
+          <Button type="button" size="sm" variant="warning" disabled={cargando}
+            onClick={() => pedirArchivo(f.colegio.id, f.idx, tipo)}>{cargando ? 'Subiendo...' : 'Cargar PDF'}</Button>
         ) : (
-          <span style={{ fontSize: 11, color: '#8A6D1C', fontWeight: 600 }}>⏳ Pendiente</span>
+          <Badge tone="warning">Pendiente</Badge>
         )}
       </span>
     )
@@ -141,24 +148,26 @@ export default function Logistica() {
 
   return (
     <div>
-      <h1>Logística · viajes y hospedaje</h1>
-      <div className="sub">Servicios agendados que requieren transporte u hospedaje (marcados en Planeación → agenda).
-        {puedeCargar ? ' Carga aquí los PDFs de las reservas; el asesor los ve en su portal.' : ' La responsable de viajes carga las reservas; el asesor las ve en su portal.'}
-        <b> · {status}</b></div>
+      <PageHeader
+        title="Logística · viajes y hospedaje"
+        status={status}
+        description={<>Servicios agendados que requieren transporte u hospedaje (marcados en Planeación → agenda).
+          {puedeCargar ? ' Carga aquí los PDFs de las reservas; el asesor los ve en su portal.' : ' La responsable de viajes carga las reservas; el asesor las ve en su portal.'}</>}
+      />
 
       {/* input file oculto, compartido por todas las celdas */}
       <input ref={fileRef} type="file" accept="application/pdf,.pdf" onChange={onArchivo} style={{ display: 'none' }} aria-hidden />
 
       <div className="kpis" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))' }}>
-        <div className="kpi"><div className="v"><NumberTicker value={res.filas} /></div><div className="l">Servicios con necesidad</div></div>
-        <div className={`kpi ${res.pendientes > 0 ? 'warn' : 'good'}`}><div className="v"><NumberTicker value={res.pendientes} /></div><div className="l">Reservas pendientes</div></div>
-        <div className="kpi"><div className="v"><NumberTicker value={res.proximos7} /></div><div className="l">Viajan en 7 días</div></div>
-        <div className="kpi good"><div className="v"><NumberTicker value={res.completas} /></div><div className="l">Completas</div></div>
+        <KpiCard value={<NumberTicker value={res.filas} />} label="Servicios con necesidad" />
+        <KpiCard tone={res.pendientes > 0 ? 'warn' : 'good'} value={<NumberTicker value={res.pendientes} />} label="Reservas pendientes" />
+        <KpiCard value={<NumberTicker value={res.proximos7} />} label="Viajan en 7 días" />
+        <KpiCard tone="good" value={<NumberTicker value={res.completas} />} label="Completas" />
       </div>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', margin: '4px 0 10px' }}>
+      <FilterBar trailing={filas.length > 0 && <FilterCount>{filas.length.toLocaleString('es-MX')} servicios</FilterCount>}>
         <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔍 Buscar colegio…"
-          aria-label="Buscar colegio" style={{ width: 170, fontSize: 12, padding: '5px 8px' }} />
+          aria-label="Buscar colegio" style={{ width: 170 }} />
         <select value={fAsesor} onChange={(e) => setFAsesor(e.target.value)} aria-label="Filtrar por asesor" style={{ width: 'auto' }}>
           <option value="todos">Todos los asesores</option>
           {asesoresConViaje.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
@@ -177,49 +186,50 @@ export default function Logistica() {
           <input type="checkbox" checked={verRealizados} onChange={(e) => setVerRealizados(e.target.checked)} />
           Incluir realizados
         </label>
-        {filtrosActivos && <button className="sec" onClick={limpiar}>× Limpiar</button>}
-      </div>
+        {filtrosActivos && <Button type="button" size="sm" variant="ghost" onClick={limpiar}>Limpiar</Button>}
+      </FilterBar>
 
       {filas.length === 0 ? (
-        <div className="panel"><div className="hint">
-          {todas.length === 0
-            ? 'Aún no hay servicios marcados con viaje u hospedaje. Se marcan en Planeación → Hoja del asesor → Agenda (columnas ✈️/🏨).'
-            : 'Ninguna fila coincide con los filtros.'}
-          {filtrosActivos && <> <button className="sec" onClick={limpiar}>Limpiar filtros</button></>}
-        </div></div>
+        <EmptyState
+          title={todas.length === 0 ? 'Sin viajes marcados' : 'Sin resultados'}
+          detail={todas.length === 0
+            ? 'Aún no hay servicios marcados con viaje u hospedaje. Se marcan en Planeación → Hoja del asesor → Agenda.'
+            : 'Ninguna fila coincide con los filtros actuales.'}
+          action={filtrosActivos && <Button type="button" onClick={limpiar}>Limpiar filtros</Button>}
+        />
       ) : (
-        <table>
-          <thead><tr>
-            <th>Fecha</th><th>Colegio</th><th>Asesor</th><th>Servicio</th><th>Gerencia</th>
-            <th>Necesita</th><th>Estado</th><th>🎫 Transporte</th><th>🏨 Hotel</th>
-          </tr></thead>
-          <tbody>
-            {filas.map((f) => {
-              const est = estadoReserva(f.servicio)
-              const e = EST_RES[est]
-              const vencida = f.servicio.estatus !== 'realizado' && f.servicio.fechaPlan && f.servicio.fechaPlan < hoy
-              return (
-                <tr key={`${f.colegio.id}:${f.idx}`} style={{ opacity: f.servicio.estatus === 'realizado' ? 0.55 : 1 }}>
-                  <td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: vencida ? 'var(--gold)' : undefined }}
-                    title={vencida ? 'La fecha planeada ya pasó' : undefined}>{fmtCorta(f.servicio.fechaPlan)}{vencida ? ' ⚠' : ''}</td>
-                  <td style={{ textAlign: 'left' }}>
-                    <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 7, marginRight: 5, background: f.colegio.campaign === 'SMART' ? SMART : CORE }} />
-                    {f.colegio.nombre}
-                  </td>
-                  <td style={{ textAlign: 'left' }}>{nombreAsesor(f.colegio.asesorId)}</td>
-                  <td style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>{SERV_LABEL[f.servicio.tipo]}{f.servicio.nivel ? ` · ${NIVEL_LABEL[f.servicio.nivel]}` : ''}</td>
-                  <td style={{ textAlign: 'left', color: 'var(--mut)' }}>{f.colegio.gerencia ?? '—'}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{f.servicio.reqViaje && '✈️'}{f.servicio.reqViaje && f.servicio.reqHospedaje && ' '}{f.servicio.reqHospedaje && '🏨'}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    <span style={{ fontSize: 10.5, fontWeight: 700, color: e.color, background: e.bg, borderRadius: 8, padding: '2px 8px' }}>{e.label}</span>
-                  </td>
-                  <td>{celdaReserva(f, 'transporte')}</td>
-                  <td>{celdaReserva(f, 'hotel')}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+        <DataTable>
+          <table>
+            <thead><tr>
+              <th>Fecha</th><th>Colegio</th><th>Asesor</th><th>Servicio</th><th>Gerencia</th>
+              <th>Necesita</th><th>Estado</th><th>Transporte</th><th>Hotel</th>
+            </tr></thead>
+            <tbody>
+              {filas.map((f) => {
+                const est = estadoReserva(f.servicio)
+                const e = EST_RES[est]
+                const vencida = f.servicio.estatus !== 'realizado' && f.servicio.fechaPlan && f.servicio.fechaPlan < hoy
+                return (
+                  <tr key={`${f.colegio.id}:${f.idx}`} style={{ opacity: f.servicio.estatus === 'realizado' ? 0.55 : 1 }}>
+                    <td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: vencida ? 'var(--gold)' : undefined }}
+                      title={vencida ? 'La fecha planeada ya pasó' : undefined}>{fmtCorta(f.servicio.fechaPlan)}{vencida ? ' ⚠' : ''}</td>
+                    <td style={{ textAlign: 'left' }}>
+                      <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 7, marginRight: 5, background: f.colegio.campaign === 'SMART' ? SMART : CORE }} />
+                      {f.colegio.nombre}
+                    </td>
+                    <td style={{ textAlign: 'left' }}>{nombreAsesor(f.colegio.asesorId)}</td>
+                    <td style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>{SERV_LABEL[f.servicio.tipo]}{f.servicio.nivel ? ` · ${NIVEL_LABEL[f.servicio.nivel]}` : ''}</td>
+                    <td style={{ textAlign: 'left', color: 'var(--mut)' }}>{f.colegio.gerencia ?? '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{f.servicio.reqViaje && 'Viaje'}{f.servicio.reqViaje && f.servicio.reqHospedaje && ' · '}{f.servicio.reqHospedaje && 'Hotel'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}><Badge tone={e.tone}>{e.label}</Badge></td>
+                    <td>{celdaReserva(f, 'transporte')}</td>
+                    <td>{celdaReserva(f, 'hotel')}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </DataTable>
       )}
       <div className="hint" style={{ marginTop: 8 }}>
         Los PDF (máx 10 MB) viven en almacenamiento privado; el asesor ve los suyos en su portal al abrir el servicio.

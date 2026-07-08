@@ -4,6 +4,8 @@ import type { Colegio, Servicio, Estatus, Urgencia, ServTipo, NivelKey, Contacto
 import { SMART, CORE, EST_LABEL, SERV_LABEL, URG_BG, tierLabel, segColor } from './colors'
 import { urlReserva } from '../../lib/reservasStore'
 import { toast } from '../../ui/toastBus'
+import { Badge } from '../../ui/Badge'
+import { Button } from '../../ui/Button'
 
 // ─── UI compartida de la planeación (portal del asesor + hoja del coordinador) ───
 
@@ -13,14 +15,14 @@ const nivelCorto = (k: NivelKey) => NIVELES.find((n) => n.key === k)?.corto ?? k
 export function ServLabel({ s, u }: { s: Servicio; u: Urgencia }) {
   return (<>
     {SERV_LABEL[s.tipo]}
-    {s.nivel && <span title={`Atiende ${NIVEL_LABEL[s.nivel]}`}
-      style={{ fontSize: 'var(--fs-badge)', fontWeight: 700, color: '#4A4F58', background: '#E9ECF0', borderRadius: 4, padding: '1px 4px', marginLeft: 4, verticalAlign: 'middle' }}>{nivelCorto(s.nivel)}</span>}
-    {s.tipo === 'didac' && <span title="La ejecutan externos; el asesor coordina y da seguimiento"
-      style={{ fontSize: 'var(--fs-badge)', fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 4, padding: '1px 4px', marginLeft: 4, verticalAlign: 'middle' }}>EXT</span>}
-    {s.extra && <span title="Taller agregado por coordinación (caso de excepción)"
-      style={{ fontSize: 'var(--fs-badge)', fontWeight: 700, color: 'var(--pur)', background: '#F1EAF4', borderRadius: 4, padding: '1px 4px', marginLeft: 4, verticalAlign: 'middle' }}>EXTRA</span>}
-    {u === 'vencido' && <span style={{ color: 'var(--gold)', fontSize: 'var(--fs-badge)', marginLeft: 3 }}>· Vencido</span>}
-    {u === 'proximo' && <span style={{ color: SMART, fontSize: 'var(--fs-badge)', marginLeft: 3 }}>· Próximo</span>}
+    {s.nivel && <> <span title={`Atiende ${NIVEL_LABEL[s.nivel]}`}
+      style={{ marginLeft: 4, verticalAlign: 'middle' }}><Badge tone="neutral">{nivelCorto(s.nivel)}</Badge></span></>}
+    {s.tipo === 'didac' && <> <span title="La ejecutan externos; el asesor coordina y da seguimiento"
+      style={{ marginLeft: 4, verticalAlign: 'middle' }}><Badge tone="warning">EXT</Badge></span></>}
+    {s.extra && <> <span title="Taller agregado por coordinación (caso de excepción)"
+      style={{ marginLeft: 4, verticalAlign: 'middle' }}><Badge tone="purple">EXTRA</Badge></span></>}
+    {u === 'vencido' && <> <span style={{ marginLeft: 4, verticalAlign: 'middle' }}><Badge tone="warning">Vencido</Badge></span></>}
+    {u === 'proximo' && <> <span style={{ marginLeft: 4, verticalAlign: 'middle' }}><Badge tone="smart">Próximo</Badge></span></>}
   </>)
 }
 
@@ -94,7 +96,7 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
   const dot = <span aria-hidden style={{ width: 9, height: 9, borderRadius: 9, flex: '0 0 auto', background: c.campaign === 'SMART' ? SMART : CORE }} />
 
   return (
-    <div className="panel" style={{ margin: 0 }}>
+    <div className="panel colegio-card" style={{ margin: 0 }}>
       {/* header */}
       {editable ? (
         // nombre editable → el chevron es el botón que colapsa (input no puede ir dentro de <button>)
@@ -117,7 +119,7 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
       )}
 
       {/* resumen unificado: barra segmentada por servicio + X/Y */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '6px 0 2px' }}>
+      <div className="colegio-progress">
         <div style={{ display: 'flex', gap: 2, flex: 1, minWidth: 60 }}>
           {c.servicios.map((s, i) => (
             <span key={i} title={`${SERV_LABEL[s.tipo]} · ${EST_LABEL[s.estatus]}`} style={{ flex: 1, height: 7, borderRadius: 2, background: segColor(s, hoy) }} />
@@ -192,18 +194,18 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
                 {(s.reqViaje || s.reqHospedaje || s.pdfTransporte || s.pdfHotel) && (
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 3, paddingLeft: 28 }}>
                     {(s.reqViaje || s.pdfTransporte) && (s.pdfTransporte ? (
-                      <button className="sec" style={{ fontSize: 'var(--fs-meta)', padding: '3px 9px' }} title="Abrir el PDF de tu reserva de transporte"
-                        onClick={() => void abrirReserva(s.pdfTransporte!)}>🎫 Transporte</button>
+                      <Button type="button" size="sm" title="Abrir el PDF de tu reserva de transporte"
+                        onClick={() => void abrirReserva(s.pdfTransporte!)}>Transporte</Button>
                     ) : (
                       <span title="Requiere transporte; la reserva está en trámite"
-                        style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: '#8A6D1C', background: 'var(--gold-wash)', borderRadius: 8, padding: '2px 8px' }}>✈️ Viaje en trámite</span>
+                        style={{ display: 'inline-flex' }}><Badge tone="warning">Viaje en trámite</Badge></span>
                     ))}
                     {(s.reqHospedaje || s.pdfHotel) && (s.pdfHotel ? (
-                      <button className="sec" style={{ fontSize: 'var(--fs-meta)', padding: '3px 9px' }} title="Abrir el PDF de tu reserva de hotel"
-                        onClick={() => void abrirReserva(s.pdfHotel!)}>🏨 Hotel</button>
+                      <Button type="button" size="sm" title="Abrir el PDF de tu reserva de hotel"
+                        onClick={() => void abrirReserva(s.pdfHotel!)}>Hotel</Button>
                     ) : (
                       <span title="Requiere hospedaje; la reserva está en trámite"
-                        style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: '#8A6D1C', background: 'var(--gold-wash)', borderRadius: 8, padding: '2px 8px' }}>🏨 Hospedaje en trámite</span>
+                        style={{ display: 'inline-flex' }}><Badge tone="warning">Hospedaje en trámite</Badge></span>
                     ))}
                   </div>
                 )}
@@ -213,7 +215,7 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
         </div>
 
         {/* footer tintado: satisfacción (control único) · serie/inglés (coordinador) · reportar caso (portal) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 8, padding: '8px 10px', background: 'var(--panel-bg)', borderRadius: 8 }}>
+        <div className="colegio-tools">
           <label style={{ fontSize: 'var(--fs-meta)', color: 'var(--mut)', display: 'flex', alignItems: 'center', gap: 5 }}>Satisfacción
             <select value={c.satisfaccion ?? ''} aria-label="Satisfacción general"
               onChange={(e) => onPatch({ satisfaccion: e.target.value ? Number(e.target.value) : undefined })} style={{ width: 'auto', fontSize: 'var(--fs-title)', padding: '4px 4px' }}>
@@ -244,7 +246,7 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
               })}
             </span>
           </>)}
-          {onReportar && <button className="sec" onClick={onReportar} style={{ marginLeft: 'auto', color: 'var(--red)', borderColor: '#E7C7C9', fontSize: 'var(--fs-body)' }}>🚨 Reportar caso</button>}
+          {onReportar && <Button type="button" variant="danger" size="sm" onClick={onReportar} style={{ marginLeft: 'auto' }}>Reportar caso</Button>}
         </div>
 
         {/* coordinación: talleres extra (casos de excepción) */}
@@ -252,8 +254,8 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8, fontSize: 'var(--fs-meta)', color: 'var(--mut)' }}>
             <span>➕ Taller extra:</span>
             {(['uso', 'prof', 'didac'] as ServTipo[]).map((t) => (
-              <button key={t} className="sec" style={{ fontSize: 'var(--fs-meta)', padding: '4px 9px' }} title={`Agregar un taller de ${SERV_LABEL[t].toLowerCase()} fuera de la matriz del tipo`}
-                onClick={() => onAgregar(t)}>{SERV_LABEL[t]}</button>
+              <Button key={t} type="button" size="sm" title={`Agregar un taller de ${SERV_LABEL[t].toLowerCase()} fuera de la matriz del tipo`}
+                onClick={() => onAgregar(t)}>{SERV_LABEL[t]}</Button>
             ))}
             <span className="hint" style={{ margin: 0 }}>para casos de excepción; queda marcado EXTRA</span>
           </div>
@@ -264,15 +266,15 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8, fontSize: 'var(--fs-meta)', color: 'var(--mut)' }}>
             <span>🔗 Enlace del director:</span>
             {urlDirector ? (<>
-              <button className="sec" style={{ fontSize: 'var(--fs-meta)', padding: '4px 9px' }} onClick={copiarEnlace}>Copiar</button>
+              <Button type="button" size="sm" onClick={copiarEnlace}>Copiar</Button>
               <a className="sec" style={{ fontSize: 'var(--fs-meta)', padding: '4px 9px', textDecoration: 'none' }} href={`#/vista-director/${c.id}`} title="Cómo la ve el director (vista previa interna)">Vista previa ↗</a>
-              <button className="sec" style={{ fontSize: 'var(--fs-meta)', padding: '4px 9px' }}
-                onClick={() => { if (window.confirm('El enlace anterior dejará de funcionar. ¿Generar uno nuevo?')) { onPatch({ tokenDirector: genTokenDirector() }); toast('Enlace regenerado; copia el nuevo', 'ok') } }}>Regenerar</button>
-              <button className="sec" style={{ fontSize: 'var(--fs-meta)', padding: '4px 9px' }}
-                onClick={() => { if (window.confirm('El director ya no podrá abrir su pantalla de avance. ¿Desactivar el enlace?')) { onPatch({ tokenDirector: undefined }); toast('Enlace desactivado', 'ok') } }}>Desactivar</button>
+              <Button type="button" size="sm"
+                onClick={() => { if (window.confirm('El enlace anterior dejará de funcionar. ¿Generar uno nuevo?')) { onPatch({ tokenDirector: genTokenDirector() }); toast('Enlace regenerado; copia el nuevo', 'ok') } }}>Regenerar</Button>
+              <Button type="button" size="sm" variant="ghost"
+                onClick={() => { if (window.confirm('El director ya no podrá abrir su pantalla de avance. ¿Desactivar el enlace?')) { onPatch({ tokenDirector: undefined }); toast('Enlace desactivado', 'ok') } }}>Desactivar</Button>
             </>) : (
-              <button className="sec" style={{ fontSize: 'var(--fs-meta)', padding: '4px 9px' }}
-                onClick={() => { onPatch({ tokenDirector: genTokenDirector() }); toast('Enlace generado; usa «Copiar» para compartirlo', 'ok') }}>Generar enlace</button>
+              <Button type="button" size="sm"
+                onClick={() => { onPatch({ tokenDirector: genTokenDirector() }); toast('Enlace generado; usa «Copiar» para compartirlo', 'ok') }}>Generar enlace</Button>
             )}
           </div>
         )}
