@@ -141,6 +141,7 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
         <div style={{ marginTop: 7 }}>
           {rows.map(({ s, i }) => {
             const u = urgencia(s, hoy); const real = s.estatus === 'realizado'
+            const fechaValor = (real ? s.fechaReal : s.fechaPlan) ?? ''
             return (
               <Fragment key={i}>
                 <div className="serv-row" style={{ background: URG_BG[u] }}>
@@ -157,9 +158,9 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
                     )}
                   </span>
                   <div className="c-meta">
-                    <span className="c-fecha" style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 'var(--fs-caption)', color: 'var(--mut)' }} title={real ? 'Fecha real' : 'Fecha planeada'}>
-                      {real ? 'R' : 'P'}
-                      <input type="date" aria-label={real ? 'Fecha real' : 'Fecha planeada'} value={(real ? s.fechaReal : s.fechaPlan) ?? ''}
+                    <span className={`c-fecha${fechaValor ? '' : ' sin-fecha'}`} style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 'var(--fs-caption)', color: 'var(--mut)' }} title={real ? 'Fecha real' : 'Fecha planeada'}>
+                      <span className="c-fecha-kind">{real ? 'R' : 'P'}</span>
+                      <input type="date" aria-label={fechaValor ? (real ? 'Fecha real' : 'Fecha planeada') : (real ? 'Capturar fecha real' : 'Agendar fecha planeada')} value={fechaValor}
                         onChange={(e) => onServ(i, real ? { fechaReal: e.target.value || undefined } : { fechaPlan: e.target.value || undefined })} />
                     </span>
                     <select className={`c-nivel${s.nivel ? ' con-valor' : ''}`} value={s.nivel ?? ''} aria-label="Nivel escolar que atiende" title="Nivel escolar que atiende este servicio"

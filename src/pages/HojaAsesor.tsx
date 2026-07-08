@@ -165,7 +165,7 @@ export default function HojaAsesor() {
 
   // ── Dashboard del asesor ─────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--line)' }}>
+    <div className="asesor-page" style={{ minHeight: '100vh', background: 'var(--line)' }}>
       <header className="app-header">
         <div className="inner" style={{ maxWidth: 820, flexWrap: 'wrap', rowGap: 6 }}>
           <div className="brand">
@@ -186,7 +186,7 @@ export default function HojaAsesor() {
         </div>
       </header>
 
-      <div style={{ maxWidth: 820, margin: '0 auto', padding: '16px 14px 110px' }}>
+      <div className="asesor-main" style={{ maxWidth: 820, margin: '0 auto', padding: '16px 14px 110px' }}>
         <h1 style={{ marginBottom: 2 }}>Hola, {asesor.nombre}</h1>
         <div className="sub">Tu hoja de servicios pedagógicos · {misColegios.length} colegios asignados.</div>
 
@@ -215,7 +215,7 @@ export default function HojaAsesor() {
               : proximos.map((r) => {
                 const u = urgencia(r.servicio, hoy)
                 return (
-                  <div key={r.colegioId + ':' + r.idx} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 4px', borderBottom: '1px solid #F0F2F5', background: URG_BG[u], borderRadius: 6 }}>
+                  <div key={r.colegioId + ':' + r.idx} className="asesor-agenda-row" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 4px', borderBottom: '1px solid #F0F2F5', background: URG_BG[u], borderRadius: 6 }}>
                     <div style={{ width: 46, flex: '0 0 auto', fontWeight: 700, fontSize: 'var(--fs-body)', color: u === 'vencido' ? 'var(--gold)' : '#2C2F36' }}>{fmtF(r.servicio.fechaPlan!)}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 'var(--fs-body)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.colegioNombre}</div>
@@ -233,7 +233,7 @@ export default function HojaAsesor() {
             <div className="panel">
               <h3>⚠️ Requieren tu atención</h3>
               {atencion.map(({ c, venc, sinFecha, satBaja }) => (
-                <div key={c.id} style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', padding: '5px 0', borderBottom: '1px solid #F0F2F5', fontSize: 'var(--fs-body)' }}>
+                <div key={c.id} className="asesor-attention-row" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', padding: '5px 0', borderBottom: '1px solid #F0F2F5', fontSize: 'var(--fs-body)' }}>
                   <span style={{ width: 8, height: 8, borderRadius: 8, background: c.campaign === 'SMART' ? SMART : CORE, flex: '0 0 auto' }} />
                   <b style={{ marginRight: 2 }}>{c.nombre}</b>
                   {venc > 0 && <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 7px' }}>{venc} vencido{venc > 1 ? 's' : ''}</span>}
@@ -275,7 +275,7 @@ export default function HojaAsesor() {
 
           {/* Mis colegios: búsqueda + filtros */}
           <h2 style={{ marginTop: 18 }}>Mis colegios</h2>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', margin: '6px 0 10px' }}>
+          <div className="asesor-filters" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', margin: '6px 0 10px' }}>
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔍 Buscar colegio…"
               aria-label="Buscar colegio" style={{ flex: '1 1 150px', minWidth: 140, fontSize: 'var(--fs-input)', padding: '7px 10px' }} />
             <select value={fEstado} onChange={(e) => setFEstado(e.target.value as typeof fEstado)} style={{ width: 'auto', fontSize: 'var(--fs-body)', padding: '7px 6px' }}>
@@ -300,7 +300,7 @@ export default function HojaAsesor() {
           {visibles.length === 0 ? (
             <div className="hint">Ningún colegio coincide. <button className="sec" onClick={limpiar}>Limpiar filtros</button></div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+            <div className="asesor-card-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
               {visibles.map((c, idxV) => (
                 <div key={c.id} className="card-in" style={{ ['--i' as string]: Math.min(idxV, 8) }}>
                   <ColegioCard c={c} hoy={hoy} abierto={abiertoCard(c.id, idxV)}
