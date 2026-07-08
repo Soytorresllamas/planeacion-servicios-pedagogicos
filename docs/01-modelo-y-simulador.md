@@ -6,18 +6,20 @@ El modelo es la **fuente única de verdad** del proyecto: el Simulador y la vist
 
 ---
 
-## 1. Modelo por campaña: 2 volúmenes × 3 tipos de servicio
+## 1. Modelo por campaña: volumen × mezcla de tipos × matriz de servicios
 
-El modelo es **"una vez por campaña"**: hay **un volumen de colegios por campaña** (`vSmart`, `vCore`) y cada colegio recibe uso + profundización + didácticas según sus **servicios/colegio por tipo** (rejilla 2×3). Los servicios se llaman "servicios" (antes "talleres").
+Cada campaña tiene **un volumen de colegios** (`vSmart`, `vCore`) repartido en **4 tipos de colegio** (Top/Alto/Medio/Bajo) con su **mezcla %** propia; cada tipo recibe servicios según la **matriz** de `TIER_SEED` (uso/prof/didác por colegio). `aggregateTiers(vTotal, tiers)` agrega los 4 tipos a servicios anuales por tipo de servicio.
 
-| | Volumen (colegios) | Uso | Profund. | Didác. |
-|---|---|---|---|---|
-| **SMART** | `vSmart` = 321 | `tUsoS` = 3 | `tProfS` = 3 | `tAdicS` = 1 |
-| **CORE** | `vCore` = 1047 | `tUsoC` = 3 | `tProfC` = 3 | `tAdicC` = 1 |
+Semilla real (jul 2026, dato de negocio):
 
-`servicios_tipo = volumen_campaña × curva_campaña × servicios/colegio_tipo`.
+| | Volumen | Top | Alto | Medio | Bajo |
+|---|---|---|---|---|---|
+| **SMART** | `vSmart` = 413 | 23 % | 38 % | 32 % | 7 % |
+| **CORE** | `vCore` = 2069 | 17 % | 23 % | 43 % | 17 % |
 
-Total del ciclo con las semillas: **9,576 servicios** = SMART 321×7 (2,247) + CORE 1047×7 (7,329).
+Matriz de servicios/colegio (compartida): Top 3/2/1 · Alto 2/2/1 · Medio 1/1/1 · Bajo 1/1/0.
+
+Total del ciclo con las semillas: **≈ 9,671 servicios** = SMART 413×4.38 (≈1,809) + CORE 2069×3.80 (≈7,862); por tipo: uso ≈ 4,008 · prof ≈ 3,562 · didácticas ≈ 2,101.
 
 > ℹ️ **Simplificación (jul 2026):** antes había 6 volúmenes sueltos por tipo y una curva por tipo. Ahora son **2 volúmenes** (uno por campaña) y **2 curvas de cierre** (una por campaña). Todos los servicios de una campaña comparten su volumen y su curva.
 
@@ -41,13 +43,14 @@ Para cada mes `i`:
 
 `cS = norm(curves.smart)`, `cC = norm(curves.core)` (una curva por campaña).
 ```
-usoT   = vSmart × cS[i] × tUsoS          // Uso SMART
-profT  = vSmart × cS[i] × tProfS         // Profundización SMART
-adicST = vSmart × cS[i] × tAdicS         // Didácticas SMART
-usoCT  = vCore  × cC[i] × tUsoC          // Uso CORE
-profCT = vCore  × cC[i] × tProfC         // Profundización CORE
-adicCT = vCore  × cC[i] × tAdicC         // Didácticas CORE
-coreUP = usoCT + profCT                  // uso+prof de CORE del mes
+smA = aggregateTiers(vSmart, tiersSmart)   // servicios anuales SMART {uso, prof, didac}
+coA = aggregateTiers(vCore,  tiersCore)    // servicios anuales CORE
+usoT   = smA.uso   × cS[i]               // Uso SMART del mes
+profT  = smA.prof  × cS[i]               // Profundización SMART
+adicST = smA.didac × cS[i]               // Didácticas SMART
+usoCT  = coA.uso   × cC[i]               // Uso CORE
+profCT = coA.prof  × cC[i]               // Profundización CORE
+adicCT = coA.didac × cC[i]               // Didácticas CORE
 
 smart  = usoT + profT + adicST           // total SMART del mes
 core   = adicCT + usoCT + profCT         // total CORE del mes (didác + uso + prof)
@@ -101,17 +104,17 @@ COSTO DE SERVICIOS = Σ Costo_servicio_s
 COSTO DE TRASLADOS = Σ Costo_traslado_s
 COSTO TOTAL        = servicios + traslados
 ```
-Donde `N_uso = Σ(usoT+usoCT)`, `N_prof = Σ(profT+profCT)`, `N_didac = Σ(adicST+adicCT)`. Es decir, **las cubetas de costo son por tipo, no por campaña**: CORE uso/prof caen en las mismas cubetas `uso`/`prof` que SMART. Con las semillas ($0 uso/prof, 0% traslado uso/prof) no cambian el costo total ($5,950,800); ponles costo para que sí cuenten.
+Donde `N_uso = Σ(usoT+usoCT)`, `N_prof = Σ(profT+profCT)`, `N_didac = Σ(adicST+adicCT)`. Es decir, **las cubetas de costo son por tipo, no por campaña**: CORE uso/prof caen en las mismas cubetas `uso`/`prof` que SMART. Con las semillas ($0 uso/prof, 0% traslado uso/prof) no cambian el costo total (≈$9,140,900); ponles costo para que sí cuenten.
 
 **Dónde vive el resultado:**
 - Por mes: `MonthRow.costServ`, `.costTras`, `.costTot` (para la gráfica mensual).
 - Anual: `k.costs = { byType[], servicios, traslados, trasladosN, total }` (para KPIs y la tabla de desglose).
 
-**Ejemplo con las semillas**: didácticas = 1368 servicios (321 SMART + 1047 CORE) → servicios $5,130,000 + traslados (1368 × 40% × $1,500 = $820,800) = **$5,950,800**.
+**Ejemplo con las semillas**: didácticas ≈ 2,101 servicios (384 SMART + 1,717 CORE) → servicios ≈$7,880,100 + traslados (2,101 × 40% × $1,500 ≈ $1,260,800) = **≈$9,140,900**.
 
 **Notas de comportamiento:**
 - Un **traslado** es un evento de costo fijo; su cantidad sale de la proporción, **no** se redondea internamente (se muestra redondeado). Si algún día se quieren viajes enteros, redondear con `Math.ceil`.
-- Como uso/prof cuestan $0 por defecto, la **intensidad** (que solo mueve `tUsoS`/`tProfS` de SMART) no cambia el costo total hasta que les pongas costo. Las didácticas (`tAdicS`/`tAdicC` fijos) mandan el costo.
+- Como uso/prof cuestan $0 por defecto, mover la matriz de uso/prof no cambia el costo total hasta que les pongas costo. Las didácticas mandan el costo.
 - Las **proporciones no alteran** el costo de servicios, solo el de traslados (hay una prueba que lo fija).
 
 ---

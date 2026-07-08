@@ -195,13 +195,17 @@ describe('compute — costos', () => {
 });
 
 describe('compute — modelo por campaña (SMART/CORE)', () => {
-  it('semillas: totales 321/1047 y 4 tipos de colegio (mezcla + matriz) por campaña', () => {
-    expect(DEFAULTS.vSmart).toBe(321);
-    expect(DEFAULTS.vCore).toBe(1047);
+  it('semillas reales (jul 2026): totales 413/2069 y mezcla propia por campaña', () => {
+    expect(DEFAULTS.vSmart).toBe(413);
+    expect(DEFAULTS.vCore).toBe(2069);
     expect(DEFAULTS.tiersSmart).toHaveLength(4);
     expect(DEFAULTS.tiersCore).toHaveLength(4);
     expect(DEFAULTS.tiersSmart.map((t) => t.key)).toEqual(['top', 'alto', 'medio', 'bajo']);
-    expect(DEFAULTS.tiersSmart[0]).toMatchObject({ uso: 3, prof: 2, didac: 1 }); // matriz de ejemplo
+    // mezcla del dato de negocio (cada campaña la suya; ambas suman 100)
+    expect(DEFAULTS.tiersSmart.map((t) => t.pct)).toEqual([23, 38, 32, 7]);
+    expect(DEFAULTS.tiersCore.map((t) => t.pct)).toEqual([17, 23, 43, 17]);
+    // la matriz de servicios sigue saliendo de TIER_SEED
+    expect(DEFAULTS.tiersSmart[0]).toMatchObject({ uso: 3, prof: 2, didac: 1 });
     expect(TIER_SEED.reduce((s, t) => s + t.pct, 0)).toBe(100);
   });
 

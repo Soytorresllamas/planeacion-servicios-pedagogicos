@@ -33,16 +33,16 @@ datos para todos.
 
 ## 3 · El corazón del modelo
 
-- **Dos campañas:** SMART (321 colegios) y CORE (1,047) — 1,368 colegios en total.
+- **Dos campañas:** SMART (413 colegios) y CORE (2,069) — 2,482 colegios en total.
 - **Cuatro categorías de colegio** por campaña, con su mezcla y su paquete de
   servicios anuales:
 
-| Categoría | % de la cartera | Uso | Profundización | Didáctica Específica |
-|---|---|---|---|---|
-| **Top** | 10 % | 3 | 2 | 1 |
-| **Alto** | 25 % | 2 | 2 | 1 |
-| **Medio** | 40 % | 1 | 1 | 1 |
-| **Bajo** | 25 % | 1 | 1 | 0 |
+| Categoría | % SMART | % CORE | Uso | Profundización | Didáctica Específica |
+|---|---|---|---|---|---|
+| **Top** | 23 % | 17 % | 3 | 2 | 1 |
+| **Alto** | 38 % | 23 % | 2 | 2 | 1 |
+| **Medio** | 32 % | 43 % | 1 | 1 | 1 |
+| **Bajo** | 7 % | 17 % | 1 | 1 | 0 |
 
 - **Regla de ejecución:** Uso y Profundización los dan **asesores empleados**
   mientras haya capacidad (≈ 520 servicios al año por asesor; 10 asesores);
@@ -138,7 +138,7 @@ La **medición ex-post**:
 
 ## 8 · Estado actual y siguientes pasos
 
-**Hoy (julio 2026):** todos los módulos en producción, operando con los 1,368
+**Hoy (julio 2026):** todos los módulos en producción, operando con los 2,482
 cupos simulados. Plantilla lista y enviada a BI.
 
 **Siguientes pasos:**
@@ -153,7 +153,7 @@ cupos simulados. Plantilla lista y enviada a BI.
 ## 9 · Guión sugerido para la presentación (10 láminas)
 
 1. **Portada** — "Una plataforma para el ciclo completo del nuevo modelo".
-2. **El reto** — 2 campañas, 1,368 colegios, capacidad limitada, costos por medir (§2).
+2. **El reto** — 2 campañas, 2,482 colegios, capacidad limitada, costos por medir (§2).
 3. **El modelo** — la tabla de categorías y la regla internos/externos (§3).
 4. **Demo 1: Simulador** — mover una palanca en vivo y ver el efecto.
 5. **Demo 2: Planeación** — asignar un colegio y ver la hoja del asesor.

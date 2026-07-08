@@ -68,14 +68,17 @@ export interface Tier {
   /** Servicios/colegio de este tipo. */
   uso: number; prof: number; didac: number;
 }
-// Semilla base (placeholder, editable): mezcla y matriz de ejemplo.
+// Etiquetas + MATRIZ de servicios por tipo (fuente única); el pct de aquí es solo
+// genérico — la mezcla REAL de cada campaña se aplica abajo con `conMezcla`.
 export const TIER_SEED: Tier[] = [
   { key: "top",   label: "Top",   pct: 10, uso: 3, prof: 2, didac: 1 },
   { key: "alto",  label: "Alto",  pct: 25, uso: 2, prof: 2, didac: 1 },
   { key: "medio", label: "Medio", pct: 40, uso: 1, prof: 1, didac: 1 },
   { key: "bajo",  label: "Bajo",  pct: 25, uso: 1, prof: 1, didac: 0 },
 ];
-const cloneTiers = (ts: Tier[]): Tier[] => ts.map((t) => ({ ...t }));
+/** Tiers de una campaña: matriz de TIER_SEED + su propia mezcla de colegios. */
+const conMezcla = (pcts: Record<TierKey, number>): Tier[] =>
+  TIER_SEED.map((t) => ({ ...t, pct: pcts[t.key] }));
 
 export interface CostInputs {
   /** Costo unitario por servicio (MXN). */
@@ -97,9 +100,10 @@ export interface Defaults extends CostInputs {
 
 export const DEFAULTS: Defaults = {
   nAse:10, tDay:2, dWeek:5, wMonth:4.33, prodExt:30,
-  // volumen total por campaña; el detalle por tipo de colegio va en tiersSmart/tiersCore
-  vSmart:321, vCore:1047,
-  tiersSmart: cloneTiers(TIER_SEED), tiersCore: cloneTiers(TIER_SEED),
+  // Semilla real (jul 2026, dato de negocio): total y mezcla POR CAMPAÑA.
+  vSmart:413, vCore:2069,
+  tiersSmart: conMezcla({ top: 23, alto: 38, medio: 32, bajo: 7 }),
+  tiersCore:  conMezcla({ top: 17, alto: 23, medio: 43, bajo: 17 }),
   retS:94, retC:89,
   // costos: didácticas $3,750 y traslados $1,500; uso/prof en 0. Solo didácticas viajan (40%).
   costoUso:0, costoProf:0, costoDidac:3750, costoTraslado:1500,

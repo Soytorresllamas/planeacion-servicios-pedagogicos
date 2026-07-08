@@ -69,10 +69,10 @@ El "criterio de volumen y segmentación" **no se captura a mano**. Cuando se gen
 
 ## 4. Generación de cupos y **escala**
 
-Los conteos del Simulador dan **~1,368 cupos** (321 SMART + 1,047 CORE, repartidos por la mezcla % de cada tipo). Renderizar eso como tarjetas es inviable. Estrategia:
+Los conteos del Simulador dan **~2,482 cupos** (413 SMART + 2,069 CORE, repartidos por la mezcla % de cada campaña). Renderizar eso como tarjetas es inviable. Estrategia:
 
 - Los conteos por tipo usan **restos mayores** (`repartirColegios`): siempre suman exactamente el total de la campaña. ⚠️ No regreses a `Math.round` por tipo — perdía/inventaba colegios (SMART 321→320, CORE 1047→1048); hay prueba de regresión.
-- El **pool** de colegios sin asignar se muestra como **lista compacta filtrable** (campaña + tipo), nunca como 1,368 tarjetas.
+- El **pool** de colegios sin asignar se muestra como **lista compacta filtrable** (campaña + tipo), nunca como 2,482 tarjetas.
 - Las **tarjetas** (pesadas) se renderizan **solo para el asesor seleccionado**.
 - Generar es idempotente por `id`: regenerar respeta asignaciones/estatus existentes por `id` cuando sea posible.
 - Un control decide cuántos cupos generar (por defecto, los del Simulador); no todos tienen que asignarse: lo **no asignado = externos**.

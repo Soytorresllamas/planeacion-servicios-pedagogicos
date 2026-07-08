@@ -32,25 +32,27 @@ describe('serviciosDeTier', () => {
 });
 
 describe('nColegios / repartirColegios', () => {
-  it('reparte según la mezcla', () => {
-    expect(nColegios(321, DEFAULTS.tiersSmart[0], DEFAULTS.tiersSmart)).toBe(32);   // Top 10%
-    expect(nColegios(1047, DEFAULTS.tiersCore[1], DEFAULTS.tiersCore)).toBe(262);   // Alto 25%
+  it('reparte según la mezcla real de cada campaña', () => {
+    expect(nColegios(413, DEFAULTS.tiersSmart[0], DEFAULTS.tiersSmart)).toBe(95);    // SMART Top 23%
+    expect(nColegios(2069, DEFAULTS.tiersCore[1], DEFAULTS.tiersCore)).toBe(476);    // CORE Alto 23%
   });
 
-  it('los conteos suman EXACTAMENTE el total (regresión: Math.round daba 320 y 1048)', () => {
-    expect(repartirColegios(321, DEFAULTS.tiersSmart).reduce((a, b) => a + b, 0)).toBe(321);
-    expect(repartirColegios(1047, DEFAULTS.tiersCore).reduce((a, b) => a + b, 0)).toBe(1047);
+  it('los conteos suman EXACTAMENTE el total (regresión: Math.round perdía/inventaba colegios)', () => {
+    expect(repartirColegios(413, DEFAULTS.tiersSmart).reduce((a, b) => a + b, 0)).toBe(413);
+    expect(repartirColegios(2069, DEFAULTS.tiersCore).reduce((a, b) => a + b, 0)).toBe(2069);
   });
 
-  it('los sobrantes van a los restos mayores (SMART medio 128.4 → 129)', () => {
-    expect(repartirColegios(321, DEFAULTS.tiersSmart)).toEqual([32, 80, 129, 80]);
+  it('los sobrantes van a los restos mayores (SMART top 94.99 → 95; empates al primero)', () => {
+    expect(repartirColegios(413, DEFAULTS.tiersSmart)).toEqual([95, 157, 132, 29]);
+    // CORE: top y bajo empatan en resto (.73); el sobrante cae primero en top
+    expect(repartirColegios(2069, DEFAULTS.tiersCore)).toEqual([352, 476, 889, 352]);
   });
 
   it('generateColegios genera exactamente vSmart + vCore cupos', () => {
     const cols = generateColegios(DEFAULTS.vSmart, DEFAULTS.tiersSmart, DEFAULTS.vCore, DEFAULTS.tiersCore);
-    expect(cols.filter((c) => c.campaign === 'SMART')).toHaveLength(321);
-    expect(cols.filter((c) => c.campaign === 'CORE')).toHaveLength(1047);
-    expect(cols).toHaveLength(1368);
+    expect(cols.filter((c) => c.campaign === 'SMART')).toHaveLength(413);
+    expect(cols.filter((c) => c.campaign === 'CORE')).toHaveLength(2069);
+    expect(cols).toHaveLength(2482);
   });
 });
 
@@ -104,7 +106,7 @@ describe('asignar / resumen / cargaAsesor', () => {
   });
 
   it('quitar asignación con asesorId=null', () => {
-    // vSmart=10 → Top redondea a 1 colegio: existe 'SMART-top-001'
+    // vSmart=10 con Top 23% → 2 cupos Top: existe 'SMART-top-001'
     const cols = asignar(generateColegios(10, DEFAULTS.tiersSmart, 0, DEFAULTS.tiersCore), new Set(['SMART-top-001']), 'ase-1');
     expect(cols.find((c) => c.id === 'SMART-top-001')?.asesorId).toBe('ase-1');
     const back = asignar(cols, new Set(['SMART-top-001']), null);
