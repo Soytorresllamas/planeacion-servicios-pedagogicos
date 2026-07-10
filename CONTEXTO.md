@@ -95,7 +95,7 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 - **Rentabilidad** (`Rentabilidad.tsx`): valor real vs costos (traslados + externos). Hoja logística para la **Responsable Logística** (captura costos, filtros por asesor/colegio/gerencia). Ejecutor derivado: didácticas siempre externas; uso/prof según asignación.
 - **Administración** (`Administracion.tsx`, solo admin): Colegios (carga masiva XLS/CSV de BI + valor del colegio), Catálogos (gerencias, ejecutivos comerciales), Usuarios (alta/rol/activo/recuperación), Uso (mapeo de ingresos), Respaldos.
 - **Logística** (`Logistica.tsx`, `/logistica`, V3.2): consolidado de servicios agendados con **✈️ viaje / 🏨 hospedaje** (los marca logística en Planeación → agenda; marcar viaje pre-marca `traslado` en Rentabilidad). El rol **viajes** carga los PDFs de reservas (transporte y hotel, por separado) a **Supabase Storage** (bucket privado `psp-reservas`; capa en `lib/reservasStore.ts`); el asesor los abre desde su portal. Ver `docs/08-logistica-viajes.md`.
-- **6 roles** (`src/lib/sesion.ts`): **admin** (todo), **coordinador** y **logistica** (Planeación+Rentabilidad+Logística+vistas previas), **asesor** (solo su hoja), **ejecutivo** (solo `/mis-colegios`, lectura; ligado por `psp_usuarios.ejecutivo` = su nombre en «Ejecutivo Responsable»), **viajes** (solo `/logistica`; único que carga reservas junto con admin).
+- **7 roles** (`src/lib/sesion.ts`, cubiertos por `src/lib/sesion.test.ts`): **admin** (todo), **coordinador** y **logistica** (Planeación+Rentabilidad+Logística+vistas previas), **asesor** (solo su hoja), **ejecutivo** (solo `/mis-colegios`, lectura; ligado por `psp_usuarios.ejecutivo` = su nombre en «Ejecutivo Responsable»), **viajes** (solo `/logistica`; único que carga reservas junto con admin), **simulador** (solo `/simulador`, con header/nav normal — no es portal; el Simulador no toca Supabase así que no necesita RLS propia, solo ampliar el CHECK de rol).
 
 ### Carga masiva de colegios (archivo de BI)
 - Plantilla oficial: `public/plantilla-colegios.xlsx` (genera `scripts/plantilla-colegios.mjs`), descargable desde la app. Parser en `src/lib/importColegios.ts`.
@@ -106,19 +106,17 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 
 ## 6 · Estado actual y pendientes
 
-**Hecho:** V3 completa, blindada (Auth+RLS), respaldos diarios, favicon, y el fix de recarga por caché de deploy. Backend **pristino** listo para datos reales. CI verde. ~91 pruebas.
+**Hecho:** V3 completa, blindada (Auth+RLS granular por filas), respaldos diarios, favicon, fix de recarga por caché de deploy, semilla real del Simulador (SMART 413 / CORE 2,069). Backend **pristino** listo para datos reales. CI verde. 119 pruebas.
 
 **Pendientes / próximos pasos:**
-0. ⚠ **Correr `supabase_actualizacion_v3_3.sql`** (guardado por filas + RLS granular)
-   ANTES del deploy correspondiente — switchover coordinado: SQL → avisar → push.
-   Hasta entonces la app desplegada sigue leyendo el blob legado (v3_1 y v3_2 ya
+0. ⚠ **Correr `supabase_actualizacion_v3_4.sql`** (rol «simulador») ANTES del deploy
+   correspondiente — switchover coordinado: SQL → avisar → push (v3_1 a v3_3 ya
    corridos y verificados).
 1. **Cargar el catálogo real de BI** cuando lo entreguen (activa rentabilidad con valores
    reales). La plantilla ya pide niveles y contacto del colegio.
 2. **Dar de alta al equipo** (coordinación, logística, asesores) desde Administración → Usuarios.
-3. ~~RLS granular~~ **HECHO en V3.3**: filas por entidad + asesor solo escribe SUS colegios; ejecutivo lectura pura.
-4. **Backups off-site**: al pasar Supabase a plan Pro, activar sus backups automáticos (colchón contra pérdida del proyecto entero).
-5. Borrar en Supabase → Authentication → Users el usuario de prueba `prueba-rls-borrar@gmail.com` si aparece (inerte, sin acceso).
+3. **Backups off-site**: al pasar Supabase a plan Pro, activar sus backups automáticos (colchón contra pérdida del proyecto entero).
+4. Borrar en Supabase → Authentication → Users el usuario de prueba `prueba-rls-borrar@gmail.com` si aparece (inerte, sin acceso).
 
 **Gotcha de deploys:** tras publicar, para agarrar la versión nueva en un navegador con caché, hacer **Cmd+Shift+R** una vez. A partir del fix de recarga, futuros deploys se auto-reparan.
 
@@ -128,4 +126,4 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 
 - `docs/01-modelo-y-simulador.md` · `docs/05-planeacion-servicios.md` · `docs/06-rentabilidad.md` · `docs/07-administracion-usuarios.md` (seguridad + respaldos) · `docs/08-logistica-viajes.md` · `docs/04-infraestructura.md`
 - `PRESENTACION.md` — panorama divulgativo (base para presentaciones).
-- `supabase_setup.sql` (tablas base) + `supabase_blindaje.sql` (Auth + RLS; correr **después** del setup) + `supabase_actualizacion_v3_1.sql` (rol ejecutivo + vista pública del director) + `supabase_actualizacion_v3_2.sql` (rol viajes + bucket de reservas; correr al final).
+- `supabase_setup.sql` (tablas base) + `supabase_blindaje.sql` (Auth + RLS) + `supabase_actualizacion_v3_1.sql` (rol ejecutivo + vista pública del director) + `supabase_actualizacion_v3_2.sql` (rol viajes + bucket de reservas) + `supabase_actualizacion_v3_3.sql` (guardado por filas + RLS granular) + `supabase_actualizacion_v3_4.sql` (rol simulador; correr al final, en orden).

@@ -3,7 +3,7 @@
 // roles en la tabla psp_usuarios (RLS por rol). Aquí solo quedan tipos y
 // helpers PUROS testeables; las operaciones viven en lib/usuariosStore.ts.
 
-export type Rol = 'admin' | 'coordinador' | 'logistica' | 'asesor' | 'ejecutivo' | 'viajes';
+export type Rol = 'admin' | 'coordinador' | 'logistica' | 'asesor' | 'ejecutivo' | 'viajes' | 'simulador';
 
 export const ROLES: { key: Rol; label: string; descripcion: string }[] = [
   { key: 'admin', label: 'Administrador', descripcion: 'Acceso a todo, incluida Administración' },
@@ -12,6 +12,7 @@ export const ROLES: { key: Rol; label: string; descripcion: string }[] = [
   { key: 'asesor', label: 'Asesor', descripcion: 'Solo su hoja de colegios asignados' },
   { key: 'ejecutivo', label: 'Ejecutivo Comercial', descripcion: 'Solo el estatus de SUS colegios (lectura)' },
   { key: 'viajes', label: 'Responsable de Viajes', descripcion: 'Solo Logística: reservas de viaje y hospedaje' },
+  { key: 'simulador', label: 'Invitado al Simulador', descripcion: 'Solo el Simulador; sin acceso a los demás módulos' },
 ];
 
 /** Perfil de usuario (espejo de la tabla psp_usuarios; el id es el uid de Auth). */

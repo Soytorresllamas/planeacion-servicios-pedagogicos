@@ -12,7 +12,7 @@ Plataforma del ciclo completo de servicios pedagógicos SM 2026-2027 (campañas 
 - **Vista del director** (enlace público por token, revocable): la pantalla de avance que ve el cliente final, sin cuenta y sin datos internos.
 - **Rentabilidad**: valor real vs costos capturados por la Responsable Logística.
 - **Logística**: viajes y hospedaje por servicio agendado; la Responsable de Viajes carga los PDFs de reservas y el asesor los ve en su portal.
-- **Administración**: carga masiva de colegios, valor del colegio, catálogos de gerencias y ejecutivos, usuarios (6 roles con contraseña temporal) y mapeo de uso.
+- **Administración**: carga masiva de colegios, valor del colegio, catálogos de gerencias y ejecutivos, usuarios (7 roles con contraseña temporal) y mapeo de uso.
 
 ## Ver en línea (GitHub Pages)
 
