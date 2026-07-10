@@ -106,12 +106,12 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 
 ## 6 · Estado actual y pendientes
 
-**Hecho:** V3 completa, blindada (Auth+RLS granular por filas), respaldos diarios, favicon, fix de recarga por caché de deploy, semilla real del Simulador (SMART 413 / CORE 2,069). Backend **pristino** listo para datos reales. CI verde. 119 pruebas.
+**Hecho:** V3 completa, blindada (Auth+RLS granular por filas), respaldos diarios, favicon, fix de recarga por caché de deploy, semilla real del Simulador (SMART 413 / CORE 2,069), rol «simulador» (v3_4.sql corrido y confirmado). Backend **pristino** listo para datos reales. CI verde. 122 pruebas.
 
 **Pendientes / próximos pasos:**
-0. ⚠ **Correr `supabase_actualizacion_v3_4.sql`** (rol «simulador») ANTES del deploy
-   correspondiente — switchover coordinado: SQL → avisar → push (v3_1 a v3_3 ya
-   corridos y verificados).
+0. Un alta de «Invitado al Simulador» falló ANTES de correr v3_4 (quedó cuenta en
+   Auth sin fila de perfil). Borrar ese correo huérfano en Supabase →
+   Authentication → Users y reintentar el alta desde Administración → Usuarios.
 1. **Cargar el catálogo real de BI** cuando lo entreguen (activa rentabilidad con valores
    reales). La plantilla ya pide niveles y contacto del colegio.
 2. **Dar de alta al equipo** (coordinación, logística, asesores) desde Administración → Usuarios.
@@ -126,4 +126,4 @@ Ya NO hay auth de maqueta ni acceso anónimo. Ver `supabase_blindaje.sql` y `doc
 
 - `docs/01-modelo-y-simulador.md` · `docs/05-planeacion-servicios.md` · `docs/06-rentabilidad.md` · `docs/07-administracion-usuarios.md` (seguridad + respaldos) · `docs/08-logistica-viajes.md` · `docs/04-infraestructura.md`
 - `PRESENTACION.md` — panorama divulgativo (base para presentaciones).
-- `supabase_setup.sql` (tablas base) + `supabase_blindaje.sql` (Auth + RLS) + `supabase_actualizacion_v3_1.sql` (rol ejecutivo + vista pública del director) + `supabase_actualizacion_v3_2.sql` (rol viajes + bucket de reservas) + `supabase_actualizacion_v3_3.sql` (guardado por filas + RLS granular) + `supabase_actualizacion_v3_4.sql` (rol simulador; correr al final, en orden).
+- `supabase_setup.sql` (tablas base) + `supabase_blindaje.sql` (Auth + RLS) + `supabase_actualizacion_v3_1.sql` (rol ejecutivo + vista pública del director) + `supabase_actualizacion_v3_2.sql` (rol viajes + bucket de reservas) + `supabase_actualizacion_v3_3.sql` (guardado por filas + RLS granular) + `supabase_actualizacion_v3_4.sql` (rol simulador). Los 4 ya están corridos y confirmados en producción.
