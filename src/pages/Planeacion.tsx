@@ -1,9 +1,9 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { DEFAULTS, TIER_SEED } from '../data/model'
 import type { TierKey, Campaign } from '../data/model'
 import {
   defaultPlaneacion, generateColegios, asignarPorTipo, liberarPorTipo,
-  contarPorTipo, cargaAsesor, resumen, setServicio, patchColegio, renombrarAsesor, avanceAsignado, ESTATUS,
+  contarPorTipo, cargasPorAsesor, CARGA_VACIA, resumen, setServicio, patchColegio, renombrarAsesor, avanceAsignado, ESTATUS,
   hoyISO, urgencia, agendaAsesor, serviciosDeAsesor, SERIES, INGLES, SATISFACCION, PROBLEMAS, atenderAlerta,
   agregarServicioExtra, quitarServicioExtra, marcarNecesidadViaje,
 } from '../data/planeacion'
@@ -86,10 +86,13 @@ export default function Planeacion() {
   const marcarViaje = (colegioId: string, idx: number, patch: { reqViaje?: boolean; reqHospedaje?: boolean }) =>
     setData((d) => ({ ...d, colegios: marcarNecesidadViaje(d.colegios, colegioId, idx, patch) }))
 
-  const res = resumen(data.colegios)
+  // cargas de TODOS los asesores en una pasada (memo): antes se llamaba
+  // cargaAsesor por cada asesor en 2 loops = O(asesores × colegios) por render.
+  const cargas = useMemo(() => cargasPorAsesor(data.colegios), [data.colegios])
+  const res = useMemo(() => resumen(data.colegios), [data.colegios])
   const targetName = data.asesores.find((a) => a.id === target)?.nombre ?? '—'
   const misColegios = data.colegios.filter((c) => c.asesorId === target)
-  const cargaT = cargaAsesor(data.colegios, target)
+  const cargaT = cargas.get(target) ?? CARGA_VACIA
   const pctT = cargaT.servicios ? Math.round((cargaT.realizados / cargaT.servicios) * 100) : 0
 
   // agenda / filtros de la hoja
@@ -166,7 +169,7 @@ export default function Planeacion() {
     return null
   }
   // resumen / reconciliación (capacidad tomada de las semillas del Simulador, como los cupos)
-  const av = avanceAsignado(data.colegios)
+  const av = useMemo(() => avanceAsignado(data.colegios), [data.colegios])
   const pctG = av.servicios ? Math.round((av.realizados / av.servicios) * 100) : 0
   const capAnual = Math.round(DEFAULTS.nAse * DEFAULTS.tDay * DEFAULTS.dWeek * DEFAULTS.wMonth * 12)
   const perAseCap = DEFAULTS.tDay * DEFAULTS.dWeek * DEFAULTS.wMonth * 12
@@ -241,7 +244,7 @@ export default function Planeacion() {
           <thead><tr><th>Asesor</th><th>Colegios</th><th>Servicios</th><th>Realizados</th><th>Avance</th><th>Uso/prof</th><th>Carga</th></tr></thead>
           <tbody>
             {data.asesores.map((a) => {
-              const c = cargaAsesor(data.colegios, a.id)
+              const c = cargas.get(a.id) ?? CARGA_VACIA
               const pct = c.servicios ? Math.round((c.realizados / c.servicios) * 100) : 0
               const over = c.usoProf > perAseCap
               return (
@@ -272,7 +275,7 @@ export default function Planeacion() {
         <div className="panel">
           <h3>Asesores</h3>
           {data.asesores.map((a) => {
-            const c = cargaAsesor(data.colegios, a.id)
+            const c = cargas.get(a.id) ?? CARGA_VACIA
             const on = a.id === target
             const pct = c.servicios ? Math.round((c.realizados / c.servicios) * 100) : 0
             const sobre = c.usoProf > perAseCap

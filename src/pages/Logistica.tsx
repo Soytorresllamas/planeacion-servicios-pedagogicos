@@ -66,7 +66,10 @@ export default function Logistica() {
   const res = resumenViajes(data.colegios, hoy)
   const nombreAsesor = (id: string | null) => id ? (data.asesores.find((a) => a.id === id)?.nombre ?? id) : '— (externos)'
 
-  const todas = filasViajes(data.colegios)
+  // memoizado: filasViajes recorre TODOS los colegios×servicios; sin memo se
+  // recalculaba en cada tecleo del buscador y rompía los useMemo de abajo
+  // (deps [todas] con ref nueva cada render = caché muerta).
+  const todas = useMemo(() => filasViajes(data.colegios), [data.colegios])
   const gerencias = useMemo(() => [...new Set(todas.map((f) => f.colegio.gerencia).filter(Boolean))].sort() as string[], [todas])
   const asesoresConViaje = useMemo(() => {
     const ids = new Set(todas.map((f) => f.colegio.asesorId).filter(Boolean))

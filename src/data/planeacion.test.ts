@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULTS } from './model';
 import {
   serviciosDeTier, nColegios, repartirColegios, generateColegios, defaultAsesores, defaultPlaneacion,
-  asignar, resumen, cargaAsesor, asignarPorTipo, liberarPorTipo, contarPorTipo,
+  asignar, resumen, cargaAsesor, cargasPorAsesor, asignarPorTipo, liberarPorTipo, contarPorTipo,
   setServicio, renombrarColegio, renombrarAsesor, avanceAsignado, patchColegio,
   hoyISO, sumarDias, urgencia, agendaAsesor, serviciosDeAsesor,
   agregarAlerta, atenderAlerta,
@@ -159,6 +159,19 @@ describe('asignar / resumen / cargaAsesor', () => {
     expect(carga.realizados).toBe(1);
     // otro asesor no tiene nada
     expect(cargaAsesor(cols, 'ase-2').colegios).toBe(0);
+  });
+
+  it('cargasPorAsesor (una pasada) == cargaAsesor por asesor', () => {
+    let cols = generateColegios(DEFAULTS.vSmart, DEFAULTS.tiersSmart, DEFAULTS.vCore, DEFAULTS.tiersCore);
+    cols = asignarPorTipo(cols, 'SMART', 'top', 5, 'ase-1');
+    cols = asignarPorTipo(cols, 'CORE', 'medio', 8, 'ase-2');
+    cols = setServicio(cols, cols.find((c) => c.asesorId === 'ase-1')!.id, 0, { estatus: 'realizado' });
+    const m = cargasPorAsesor(cols);
+    for (const id of ['ase-1', 'ase-2']) expect(m.get(id)).toEqual(cargaAsesor(cols, id));
+    expect(m.get('ase-1')!.colegios).toBe(5);
+    expect(m.get('ase-1')!.realizados).toBe(1);
+    // asesor sin colegios no aparece en el Map (get → undefined)
+    expect(m.get('ase-3')).toBeUndefined();
   });
 });
 

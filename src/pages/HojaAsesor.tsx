@@ -100,6 +100,9 @@ export default function HojaAsesor() {
   }
 
   // ── Datos del asesor ─────────────────────────────────────────────────────────
+  // (sin useMemo: hay un early-return arriba por «asesor sin hoja», y los hooks
+  //  no pueden ir después de un return condicional. Cada cálculo es O(colegios)
+  //  una vez — aceptable para el portal de UN asesor.)
   const misColegios = data.colegios.filter((c) => c.asesorId === asesor.id)
   const carga = cargaAsesor(data.colegios, asesor.id)
   const pct = carga.servicios ? Math.round((carga.realizados / carga.servicios) * 100) : 0

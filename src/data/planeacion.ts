@@ -458,6 +458,27 @@ export function cargaAsesor(colegios: Colegio[], asesorId: string): Carga {
   return { colegios: cols, servicios, realizados, usoProf };
 }
 
+/** Cargas de TODOS los asesores en UNA sola pasada (Map asesorId→Carga).
+ *  Evita el O(asesores × colegios) de llamar cargaAsesor por cada asesor en un
+ *  loop de render (con el catálogo real serían cientos de miles de iteraciones).
+ *  `cargasPorAsesor(cols).get(id)` == `cargaAsesor(cols, id)`. */
+export function cargasPorAsesor(colegios: Colegio[]): Map<string, Carga> {
+  const m = new Map<string, Carga>();
+  for (const c of colegios) {
+    if (!c.asesorId) continue;
+    let g = m.get(c.asesorId);
+    if (!g) { g = { colegios: 0, servicios: 0, realizados: 0, usoProf: 0 }; m.set(c.asesorId, g); }
+    g.colegios++;
+    for (const s of c.servicios) {
+      g.servicios++;
+      if (s.estatus === 'realizado') g.realizados++;
+      if (s.tipo !== 'didac') g.usoProf++;
+    }
+  }
+  return m;
+}
+export const CARGA_VACIA: Carga = { colegios: 0, servicios: 0, realizados: 0, usoProf: 0 };
+
 // ---- Agenda / urgencia (usabilidad de la hoja del asesor) ----
 
 /** Fecha local de hoy en ISO 'YYYY-MM-DD'. */
