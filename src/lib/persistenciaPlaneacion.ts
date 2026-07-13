@@ -12,6 +12,7 @@ import type { MutableRefObject } from 'react';
 import { detectarCambios } from '../data/planeacion';
 import type { PlaneacionData, Colegio, Asesor, Alerta, CambiosPlaneacion } from '../data/planeacion';
 import { saveLocal, guardarColegios, guardarAsesores, guardarAlertas, reemplazarTodoRemoto } from './planeacionStore';
+import { isDemoMode } from './demoMode';
 
 interface Pendiente {
   estructura: boolean;
@@ -46,6 +47,11 @@ async function flushPendiente(
   const p = pend.current;
   if (!hayAlgo(p)) return;
   pend.current = vacio();
+  if (isDemoMode()) {
+    saveLocal(dataRef.current);
+    onStatus?.('Demostración · guardado local');
+    return;
+  }
   onStatus?.('Guardando…');
   let ok: boolean;
   if (p.estructura) {

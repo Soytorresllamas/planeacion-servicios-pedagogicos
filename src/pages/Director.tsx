@@ -218,8 +218,7 @@ export function PanelDirector({ d }: { d: DirectorData }) {
   )
 }
 
-// Solo en desarrollo (#/director/demo): datos de muestra para iterar el diseño
-// sin backend. La rama se elimina del build de producción (import.meta.env.DEV).
+// Demostración pública: datos simulados sin consultar el backend.
 const demoDirector = (): DirectorData => ({
   nombre: 'Instituto Cumbres del Valle',
   campaign: 'SMART',
@@ -242,7 +241,7 @@ const demoDirector = (): DirectorData => ({
 export default function DirectorPublico() {
   // el token viene fijo en la URL con la que se abrió el enlace
   const [token] = useState(() => (window.location.hash.match(/^#\/director\/([0-9a-f]{20,})/i)?.[1] ?? '').toLowerCase())
-  const demo = import.meta.env.DEV && window.location.hash === '#/director/demo'
+  const demo = window.location.hash === '#/demo/director'
   const [estado, setEstado] = useState<'cargando' | 'error' | 'ok'>(demo ? 'ok' : token ? 'cargando' : 'error')
   const [data, setData] = useState<DirectorData | null>(() => demo ? demoDirector() : null)
 

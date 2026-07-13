@@ -13,6 +13,7 @@
 import { supabase, PLANEACION_TABLE, PLANEACION_ROW, PROJECT_REF } from './supabase';
 import { LS_PLANEACION } from './localData';
 import { respaldarSiNuevoDia } from './respaldos';
+import { isDemoMode } from './demoMode';
 import type { PlaneacionData, Colegio, Asesor, Alerta } from '../data/planeacion';
 
 export const T_COLEGIOS = 'psp_colegios';
@@ -34,7 +35,7 @@ const valid = (p: unknown): p is PlaneacionData => {
 
 export const loadLocal = (): PlaneacionData | null => {
   try {
-    const raw = localStorage.getItem(LS_PLANEACION);
+    const raw = localStorage.getItem(isDemoMode() ? `${LS_PLANEACION}-demo` : LS_PLANEACION);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { v?: number; backend?: string; data?: unknown };
     // Solo se acepta el formato versionado actual y del backend actual.
@@ -44,7 +45,7 @@ export const loadLocal = (): PlaneacionData | null => {
 };
 
 export const saveLocal = (data: PlaneacionData): void => {
-  try { localStorage.setItem(LS_PLANEACION, JSON.stringify({ v: SCHEMA_V, backend: PROJECT_REF, data })); } catch { /* noop */ }
+  try { localStorage.setItem(isDemoMode() ? `${LS_PLANEACION}-demo` : LS_PLANEACION, JSON.stringify({ v: SCHEMA_V, backend: PROJECT_REF, data })); } catch { /* noop */ }
 };
 
 // ── Lectura remota (paginada: PostgREST corta en 1000 filas por petición) ─────
@@ -80,6 +81,10 @@ async function loadRemoteLegado(): Promise<LoadRemoteResult> {
 }
 
 export async function loadRemote(): Promise<LoadRemoteResult> {
+  if (isDemoMode()) {
+    const data = loadLocal();
+    return data ? { data, source: 'remote' } : { data: null, source: 'none' };
+  }
   try {
     const [cols, ases, ales] = await Promise.all([
       todas<{ data: Colegio }>(T_COLEGIOS, 'data', 'orden'),
