@@ -413,7 +413,7 @@ export default function Administracion() {
               <button className="sec" onClick={() => setCapCol((c) => c + 30)}>Mostrar 30 más ({(colegiosFiltrados.length - capCol).toLocaleString('es-MX')} restantes)</button>
             </div>
           )}
-          <div className="hint">El «Valor real» alimenta el módulo de Rentabilidad. Gerencia y ejecutivo salen de los catálogos.</div>
+          <div className="hint">El «Valor real» alimenta el módulo de Retorno. Gerencia y ejecutivo salen de los catálogos.</div>
         </div>
       </>)}
 

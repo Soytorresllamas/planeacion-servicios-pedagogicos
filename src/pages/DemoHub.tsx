@@ -5,7 +5,7 @@ const vistas = [
   { href: '#/demo/asesor', kicker: 'Campo', title: 'Hoja del asesor', copy: 'Agenda, servicios y casos críticos de la cartera.' },
   { href: '#/demo/ejecutivo', kicker: 'Comercial', title: 'Hoja del ejecutivo', copy: 'Prioridades, alertas y próximos compromisos.' },
   { href: '#/demo/director', kicker: 'Colegio', title: 'Vista del director', copy: 'Avance del ciclo, sesiones y asesor asignado.' },
-  { href: '#/demo/rentabilidad', kicker: 'Dirección', title: 'Rentabilidad', copy: 'Valor de cartera, costos y margen por campaña.' },
+  { href: '#/demo/rentabilidad', kicker: 'Dirección', title: 'Retorno', copy: 'Valor de cartera, costos y margen por campaña.' },
   { href: '#/demo/logistica', kicker: 'Operación', title: 'Logística', copy: 'Viajes, reservas y servicios externos.' },
 ]
 
@@ -35,4 +35,3 @@ export default function DemoHub() {
     </main>
   )
 }
-

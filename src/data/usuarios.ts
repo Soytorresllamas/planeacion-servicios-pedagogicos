@@ -7,8 +7,8 @@ export type Rol = 'admin' | 'coordinador' | 'logistica' | 'asesor' | 'ejecutivo'
 
 export const ROLES: { key: Rol; label: string; descripcion: string }[] = [
   { key: 'admin', label: 'Administrador', descripcion: 'Acceso a todo, incluida Administración' },
-  { key: 'coordinador', label: 'Coordinador', descripcion: 'Planeación, Rentabilidad y Logística' },
-  { key: 'logistica', label: 'Responsable Logística', descripcion: 'Planeación, Rentabilidad y Logística (captura costos)' },
+  { key: 'coordinador', label: 'Coordinador', descripcion: 'Planeación, Retorno y Logística' },
+  { key: 'logistica', label: 'Responsable Logística', descripcion: 'Planeación, Retorno y Logística (captura costos)' },
   { key: 'asesor', label: 'Asesor', descripcion: 'Solo su hoja de colegios asignados' },
   { key: 'ejecutivo', label: 'Ejecutivo Comercial', descripcion: 'Solo el estatus de SUS colegios (lectura)' },
   { key: 'viajes', label: 'Responsable de Viajes', descripcion: 'Solo Logística: reservas de viaje y hospedaje' },

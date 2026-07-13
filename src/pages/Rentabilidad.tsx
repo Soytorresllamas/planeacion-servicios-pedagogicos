@@ -136,7 +136,7 @@ export default function Rentabilidad() {
   return (
     <div className="finance-page">
       <PageHeader
-        title="Rentabilidad"
+        title="Retorno"
         status={status}
         description={<>Valor real de cada colegio contra el costo de sus servicios: transporte, hotel, viáticos y ejecución por
           externos (didácticas siempre; uso/profundización cuando no hay capacidad interna). La captura la hace la
@@ -147,7 +147,7 @@ export default function Rentabilidad() {
         <KpiCard icon={<Icon name="briefcase" />} value={global.conValor ? <NumberTicker value={global.valor} format={(n) => mxn.format(n)} /> : '—'} label="Valor de cartera" detail={`${global.conValor} colegios con valor`} />
         <KpiCard icon={<Icon name="truck" />} value={<NumberTicker value={global.costo} format={(n) => mxn.format(n)} />} label="Costo capturado" detail={`${global.conCosto} servicios`} />
         <KpiCard icon={<Icon name="chart" />} tone={global.conValor && global.margen < 0 ? 'danger' : 'good'} value={global.conValor ? <NumberTicker value={global.margen} format={(n) => mxn.format(n)} /> : '—'} label="Margen" />
-        <KpiCard icon={<Icon name="chart" />} value={pctRent === null ? '—' : <NumberTicker value={pctRent} format={(n) => `${n.toFixed(1)}%`} />} label="Rentabilidad" />
+        <KpiCard icon={<Icon name="chart" />} value={pctRent === null ? '—' : <NumberTicker value={pctRent} format={(n) => `${n.toFixed(1)}%`} />} label="Retorno" />
         <KpiCard icon={<Icon name="users" />} value={<NumberTicker value={global.servicios ? (global.externos / global.servicios) * 100 : 0} format={(n) => `${Math.round(n)}%`} />} label="Servicios externos" />
       </div>
 

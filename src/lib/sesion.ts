@@ -36,7 +36,7 @@ export const tabsPorRol = (rol: Rol): { to: string; label: string }[] => {
       return [
         { to: '/simulador', label: 'Simulador' },
         { to: '/planeacion', label: 'Planeación' },
-        { to: '/rentabilidad', label: 'Rentabilidad' },
+        { to: '/rentabilidad', label: 'Retorno' },
         { to: '/logistica', label: 'Logística' },
         { to: '/administracion', label: 'Administración' },
       ];
@@ -44,7 +44,7 @@ export const tabsPorRol = (rol: Rol): { to: string; label: string }[] => {
     case 'logistica':
       return [
         { to: '/planeacion', label: 'Planeación' },
-        { to: '/rentabilidad', label: 'Rentabilidad' },
+        { to: '/rentabilidad', label: 'Retorno' },
         { to: '/logistica', label: 'Logística' },
       ];
     case 'viajes':

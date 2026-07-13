@@ -507,7 +507,7 @@ export default function Planeacion() {
                                 <td style={{ padding: '2px 4px' }}>{inpReal(r.colegioId, r.idx, r.servicio)}</td>
                                 <td style={{ padding: '2px 4px', textAlign: 'center' }}>
                                   <input type="checkbox" checked={!!r.servicio.reqViaje} disabled={real} aria-label="Requiere viaje"
-                                    title={real ? 'Servicio ya realizado' : 'Requiere transporte: aparece en Logística (pre-marca transporte en Rentabilidad)'}
+                                    title={real ? 'Servicio ya realizado' : 'Requiere transporte: aparece en Logística (pre-marca transporte en Retorno)'}
                                     onChange={(e) => marcarViaje(r.colegioId, r.idx, { reqViaje: e.target.checked })} />
                                 </td>
                                 <td style={{ padding: '2px 4px', textAlign: 'center' }}>
@@ -524,7 +524,7 @@ export default function Planeacion() {
                       </tbody>
                     </table></DataTable>
                     <div className="hint">✈️/🏨: la responsable logística marca qué servicios agendados necesitan transporte u hospedaje;
-                      aparecen en <b>Logística</b> para que la responsable de viajes cargue las reservas y costos. Marcar viaje pre-marca «Transporte» en Rentabilidad.</div>
+                      aparecen en <b>Logística</b> para que la responsable de viajes cargue las reservas y costos. Marcar viaje pre-marca «Transporte» en Retorno.</div>
                   </>)
                 })()
               )}
