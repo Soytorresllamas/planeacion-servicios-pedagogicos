@@ -20,6 +20,7 @@ import { DataTable } from '../ui/DataTable'
 import { EmptyState } from '../ui/EmptyState'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
+import { Icon } from '../ui/Icon'
 
 const mxn = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 })
 const fmt = (n: number | null | undefined): string => (n === null || n === undefined ? '—' : mxn.format(n))
@@ -133,7 +134,7 @@ export default function Rentabilidad() {
     m === null ? { color: 'var(--faint)' } : m < 0 ? { color: 'var(--neg)', fontWeight: 700 } : { fontWeight: 600 }
 
   return (
-    <div>
+    <div className="finance-page">
       <PageHeader
         title="Rentabilidad"
         status={status}
@@ -142,12 +143,12 @@ export default function Rentabilidad() {
           Responsable Logística en su hoja.</>}
       />
 
-      <div className="kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10, marginBottom: 12 }}>
-        <KpiCard value={global.conValor ? <NumberTicker value={global.valor} format={(n) => mxn.format(n)} /> : '—'} label={`Valor de cartera (${global.conValor} colegios con valor)`} />
-        <KpiCard value={<NumberTicker value={global.costo} format={(n) => mxn.format(n)} />} label={`Costo capturado (${global.conCosto} servicios)`} />
-        <KpiCard tone={global.conValor && global.margen < 0 ? 'danger' : 'good'} value={global.conValor ? <NumberTicker value={global.margen} format={(n) => mxn.format(n)} /> : '—'} label="Margen" />
-        <KpiCard value={pctRent === null ? '—' : <NumberTicker value={pctRent} format={(n) => `${n.toFixed(1)}%`} />} label="Rentabilidad" />
-        <KpiCard value={<NumberTicker value={global.servicios ? (global.externos / global.servicios) * 100 : 0} format={(n) => `${Math.round(n)}%`} />} label="Servicios de externos" />
+      <div className="kpis finance-kpis">
+        <KpiCard icon={<Icon name="briefcase" />} value={global.conValor ? <NumberTicker value={global.valor} format={(n) => mxn.format(n)} /> : '—'} label="Valor de cartera" detail={`${global.conValor} colegios con valor`} />
+        <KpiCard icon={<Icon name="truck" />} value={<NumberTicker value={global.costo} format={(n) => mxn.format(n)} />} label="Costo capturado" detail={`${global.conCosto} servicios`} />
+        <KpiCard icon={<Icon name="chart" />} tone={global.conValor && global.margen < 0 ? 'danger' : 'good'} value={global.conValor ? <NumberTicker value={global.margen} format={(n) => mxn.format(n)} /> : '—'} label="Margen" />
+        <KpiCard icon={<Icon name="chart" />} value={pctRent === null ? '—' : <NumberTicker value={pctRent} format={(n) => `${n.toFixed(1)}%`} />} label="Rentabilidad" />
+        <KpiCard icon={<Icon name="users" />} value={<NumberTicker value={global.servicios ? (global.externos / global.servicios) * 100 : 0} format={(n) => `${Math.round(n)}%`} />} label="Servicios externos" />
       </div>
 
       {global.conValor === 0 && (

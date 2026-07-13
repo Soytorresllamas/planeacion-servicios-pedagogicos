@@ -18,13 +18,24 @@ const esEnlaceDirector = /^#\/director\//.test(window.location.hash)
 // El ternario sobre import.meta.env.DEV hace que producción ni siquiera emita
 // el chunk (la rama muerta se elimina en el build).
 const esDevCard = import.meta.env.DEV && window.location.hash === '#/dev-card'
+const devRoutes: Record<string, string> = {
+  '#/dev-layout': '/planeacion',
+  '#/dev-advisor': '/mi-hoja',
+  '#/dev-rentabilidad': '/rentabilidad',
+  '#/dev-logistica': '/logistica',
+}
+const devRoute = import.meta.env.DEV ? devRoutes[window.location.hash] : undefined
 // eslint-disable-next-line react-refresh/only-export-components -- main.tsx es el entry; no aplica fast refresh
 const DevCard = import.meta.env.DEV ? lazy(() => import('./dev/DevColegioCard.tsx')) : () => null
+// eslint-disable-next-line react-refresh/only-export-components -- arnés DEV, rama eliminada en build
+const DevLayout = import.meta.env.DEV ? lazy(() => import('./dev/DevLayoutPreview.tsx')) : () => null
 
 ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
     <ErrorBoundary>
-      {esDevCard ? (
+      {devRoute ? (
+        <Suspense fallback={null}><DevLayout initialPath={devRoute} /></Suspense>
+      ) : esDevCard ? (
         <Suspense fallback={null}><DevCard /></Suspense>
       ) : esEnlaceDirector ? (
         <DirectorPublico />

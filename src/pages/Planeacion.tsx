@@ -10,11 +10,16 @@ import {
 import type { PlaneacionData, Estatus, Servicio, Colegio, ServTipo } from '../data/planeacion'
 import { loadLocal, loadRemote } from '../lib/planeacionStore'
 import { usePersistenciaPlaneacion } from '../lib/persistenciaPlaneacion'
-import { NumberTicker } from '../ui/NumberTicker'
 import { Seg } from '../ui/Seg'
 import { toast } from '../ui/toastBus'
 import { ColegioCard, ServLabel } from '../features/planeacion/ColegioCard'
 import { SMART, CORE, EST_COLOR, EST_LABEL, URG_BG, tierLabel } from '../features/planeacion/colors'
+import { PageHeader } from '../ui/PageHeader'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
+import { PlaneacionOverview } from '../features/planeacion/dashboard/PlaneacionOverview'
+import type { AttentionSchool, CampaignOverviewStat } from '../features/planeacion/dashboard/PlaneacionOverview'
+import { DataTable } from '../ui/DataTable'
 
 const CAMPS: Campaign[] = ['SMART', 'CORE']
 const MESES_L = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -27,7 +32,7 @@ export default function Planeacion() {
   const [status, setStatus] = useState('Cargando…')
   const [targetSel, setTargetSel] = useState('')
   const [amounts, setAmounts] = useState<Record<string, number>>({})
-  const [view, setView] = useState<'asignacion' | 'hoja' | 'resumen'>('asignacion')
+  const [view, setView] = useState<'asignacion' | 'hoja' | 'resumen'>('resumen')
   const [hojaView, setHojaView] = useState<'colegio' | 'agenda'>('colegio')
   const [fEstatus, setFEstatus] = useState<'todos' | 'pendiente' | 'agendado' | 'realizado' | 'vencidos'>('todos')
   const [fCamp, setFCamp] = useState<'todos' | Campaign>('todos')
@@ -170,7 +175,6 @@ export default function Planeacion() {
   }
   // resumen / reconciliación (capacidad tomada de las semillas del Simulador, como los cupos)
   const av = useMemo(() => avanceAsignado(data.colegios), [data.colegios])
-  const pctG = av.servicios ? Math.round((av.realizados / av.servicios) * 100) : 0
   const capAnual = Math.round(DEFAULTS.nAse * DEFAULTS.tDay * DEFAULTS.dWeek * DEFAULTS.wMonth * 12)
   const perAseCap = DEFAULTS.tDay * DEFAULTS.dWeek * DEFAULTS.wMonth * 12
   const capOk = av.usoProf <= capAnual
@@ -180,39 +184,74 @@ export default function Planeacion() {
   const atender = (id: string) => { setData((d) => atenderAlerta(d, id)); toast('Alerta marcada como atendida', 'ok') }
   const nombreAsesor = (id: string) => data.asesores.find((a) => a.id === id)?.nombre ?? id
   const nombreColegio = (id: string) => data.colegios.find((c) => c.id === id)?.nombre ?? id
+  const campaignOverview = useMemo<CampaignOverviewStat[]>(() => CAMPS.map((campaign) => {
+    const schools = data.colegios.filter((c) => c.campaign === campaign)
+    const assigned = schools.filter((c) => c.asesorId)
+    const services = assigned.flatMap((c) => c.servicios)
+    const completed = services.filter((s) => s.estatus === 'realizado').length
+    const inProgress = assigned.filter((c) => c.servicios.some((s) => s.estatus !== 'pendiente') && c.servicios.some((s) => s.estatus !== 'realizado')).length
+    return {
+      campaign,
+      schools: schools.length,
+      planned: assigned.length,
+      inProgress,
+      pending: schools.length - assigned.length,
+      progress: services.length ? Math.round((completed / services.length) * 100) : 0,
+    }
+  }), [data.colegios])
+  const attentionSchools: AttentionSchool[] = (() => {
+    const advisorById = new Map(data.asesores.map((a) => [a.id, a.nombre]))
+    return data.colegios
+      .map((school) => {
+        const completed = school.servicios.filter((s) => s.estatus === 'realizado').length
+        const progress = school.servicios.length ? Math.round((completed / school.servicios.length) * 100) : 0
+        const overdue = school.servicios.some((s) => urgencia(s, hoy) === 'vencido')
+        const active = school.servicios.some((s) => s.estatus === 'agendado' || s.estatus === 'realizado')
+        const state: AttentionSchool['state'] = !school.asesorId ? 'Sin asignar' : active ? 'En progreso' : 'Pendiente'
+        return {
+          id: school.id,
+          name: school.nombre,
+          detail: school.gerencia || `${tierLabel(school.tier)} · ${school.servicios.length} servicios`,
+          campaign: school.campaign,
+          state,
+          progress,
+          responsible: school.asesorId ? advisorById.get(school.asesorId) ?? 'Sin responsable' : 'Por asignar',
+          priority: !school.asesorId ? 0 : overdue ? 1 : active ? 2 : 3,
+        }
+      })
+      .filter((school) => school.progress < 100)
+      .sort((a, b) => a.priority - b.priority || a.progress - b.progress || a.name.localeCompare(b.name))
+      .slice(0, 5)
+      .map(({ priority: _priority, ...school }) => school)
+  })()
 
   return (
-    <div>
-      <h1>Planeación de servicios · hojas de asesores</h1>
-      <div className="sub">Asigna cupos de colegios a cada asesor empleado; los servicios de cada colegio salen de su tipo
-        (matriz del Simulador). Lo que no asignes lo cubren externos. <b>· {status}</b></div>
+    <div className="planning-page">
+      <PageHeader
+        title="Planeación"
+        description="Consulta el avance por campaña, prioriza colegios y coordina la capacidad del equipo."
+        status={status}
+        actions={<>
+          <label className="planning-cycle-select"><Icon name="calendar" size={17} /><span className="sr-only">Ciclo escolar</span>
+            <select defaultValue="2026-2027" aria-label="Ciclo escolar"><option>2026-2027</option></select>
+          </label>
+          <Button size="sm" variant="secondary" onClick={regenerar}>Regenerar cupos</Button>
+        </>}
+      />
 
-      <div className="kpis" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))' }}>
-        <div className="kpi"><div className="v"><NumberTicker value={res.total} /></div><div className="l">Cupos totales</div></div>
-        <div className="kpi good"><div className="v"><NumberTicker value={res.asignados} /></div><div className="l">Asignados</div></div>
-        <div className="kpi warn"><div className="v"><NumberTicker value={res.sinAsignar} /></div><div className="l">Sin asignar (externos)</div></div>
-      </div>
-
-      <div className="row-btn" style={{ margin: '10px 0' }}>
-        <button className="sec" onClick={regenerar}>Regenerar cupos</button>
-      </div>
-
-      <Seg maxWidth={520} style={{ margin: '0 0 12px' }} value={view} onChange={setView}
+      <Seg maxWidth={520} style={{ margin: '0 0 18px' }} value={view} onChange={setView}
         options={[
+          { key: 'resumen', label: 'Resumen' },
           { key: 'asignacion', label: 'Asignación' },
           { key: 'hoja', label: 'Hoja del asesor' },
-          { key: 'resumen', label: 'Resumen' },
         ]} />
 
       {view === 'resumen' && (<>
-        <div className="kpis" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))' }}>
-          <div className="kpi"><div className="v">{av.colegios}</div><div className="l">Colegios asignados</div></div>
-          <div className="kpi good"><div className="v">{pctG}%</div><div className="l">Avance ({av.realizados}/{av.servicios} servicios)</div></div>
-          <div className="kpi warn"><div className="v">{av.servicios - av.realizados}</div><div className="l">Servicios pendientes</div></div>
-        </div>
+        <PlaneacionOverview alerts={alertasPend.length} campaigns={campaignOverview} schools={attentionSchools}
+          onOpenAssignments={() => setView('asignacion')} onOpenSchool={() => setView('hoja')} />
 
         {alertasPend.length > 0 && (<>
-          <h2>🚨 Alertas de asesores ({alertasPend.length})</h2>
+          <h2 id="alertas-planeacion">Alertas de asesores ({alertasPend.length})</h2>
           <div className="panel">
             {alertasPend.map((a) => (
               <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', padding: '6px 0', borderBottom: '1px solid #F0F2F5', fontSize: 12 }}>
@@ -240,7 +279,7 @@ export default function Planeacion() {
           las semillas del Simulador (asesores × servicios/día × días × semanas × 12 meses).</div>
 
         <h2>Avance por asesor</h2>
-        <table>
+        <DataTable><table>
           <thead><tr><th>Asesor</th><th>Colegios</th><th>Servicios</th><th>Realizados</th><th>Avance</th><th>Uso/prof</th><th>Carga</th></tr></thead>
           <tbody>
             {data.asesores.map((a) => {
@@ -266,7 +305,7 @@ export default function Planeacion() {
               )
             })}
           </tbody>
-        </table>
+        </table></DataTable>
         <div className="hint">«Carga» avisa si el uso/prof asignado a un asesor supera su capacidad anual individual (≈ {Math.round(perAseCap)} servicios).</div>
       </>)}
 
@@ -314,7 +353,7 @@ export default function Planeacion() {
         <div>
           {view === 'asignacion' && (<>
             <h2>Asignar a {targetName}</h2>
-            <table>
+            <DataTable><table>
               <thead><tr><th>Campaña</th><th>Tipo</th><th>Sin asignar</th><th>De este asesor</th><th>Cantidad</th><th></th></tr></thead>
               <tbody>
                 {CAMPS.flatMap((camp) => TIER_SEED.map((t) => {
@@ -342,7 +381,7 @@ export default function Planeacion() {
                   <td colSpan={2}></td>
                 </tr>
               </tbody>
-            </table>
+            </table></DataTable>
             <div className="hint">Asigna en tandas: escribe la cantidad y pulsa «Asignar». Lo que no asignes lo cubren externos.</div>
 
             <div className="hint" style={{ marginTop: 10 }}>La carga masiva del catálogo de colegios (archivo de BI) vive en <b>Administración → Colegios</b>.</div>
@@ -441,7 +480,7 @@ export default function Planeacion() {
                   )
                   let mesPrevio = ''
                   return (<>
-                    <table>
+                    <DataTable><table>
                       <thead><tr><th style={{ width: 24 }}></th><th>Colegio</th><th>Campaña</th><th>Servicio</th><th>Estatus</th><th>Planeada</th><th>Real</th>
                         <th title="Requiere transporte (avión o camión)" style={{ width: 40 }}>✈️ Viaje</th>
                         <th title="Requiere hospedaje" style={{ width: 40 }}>🏨 Hosp.</th>
@@ -483,7 +522,7 @@ export default function Planeacion() {
                           )
                         })}
                       </tbody>
-                    </table>
+                    </table></DataTable>
                     <div className="hint">✈️/🏨: la responsable logística marca qué servicios agendados necesitan transporte u hospedaje;
                       aparecen en <b>Logística</b> para que la responsable de viajes cargue las reservas y costos. Marcar viaje pre-marca «Transporte» en Rentabilidad.</div>
                   </>)
