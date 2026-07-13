@@ -27,8 +27,25 @@ const seedLayoutPreview = () => {
             costoHotel: travel && index % 2 === 0 ? 2400 + index * 300 : undefined,
           }
     })
-    return { ...school, nombre: names[index], asesorId: 'ase-1', valorReal: 145000 + index * 28000, satisfaccion: index < 3 ? 5 - index : undefined, servicios: services }
+    return {
+      ...school,
+      nombre: names[index],
+      asesorId: 'ase-1',
+      ejecutivo: 'Mariana Torres',
+      valorReal: 145000 + index * 28000,
+      satisfaccion: index < 3 ? 5 - index : undefined,
+      notasGenerales: index < 3 ? ['Dirección confirmó el calendario de acompañamiento.', 'Interés en ampliar la propuesta a secundaria.', 'Seguimiento comercial después de la próxima sesión.'][index] : undefined,
+      servicios: services,
+    }
   })
+  data.alertas = [{
+    id: 'alerta-demo',
+    fecha: new Date(today).toISOString(),
+    asesorId: 'ase-1',
+    colegioId: data.colegios[1].id,
+    tipo: 'materiales',
+    descripcion: 'Validar entrega de materiales antes de la próxima sesión.',
+  }]
   saveLocal(data)
 }
 

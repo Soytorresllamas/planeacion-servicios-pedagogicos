@@ -408,6 +408,70 @@ tr.total td{font-weight:700;background:var(--panel-bg);}
   .logistics-table-panel{padding:12px 10px 8px;}
 }
 
+/* ---- Portal del ejecutivo: cartera y siguiente acción comercial ---- */
+.executive-page{min-height:100vh;background:#F4F5F7;}
+.executive-topbar{position:sticky;top:0;z-index:var(--z-sticky,40);background:#fff;border-bottom:1px solid var(--line);}
+.executive-topbar-inner{max-width:1080px;min-height:68px;margin:0 auto;padding:0 22px;display:flex;align-items:center;gap:16px;}
+.executive-topbar .brand{display:flex;align-items:center;gap:12px;}
+.executive-topbar .brand-logo{width:105px;height:auto;}
+.executive-topbar .brand-txt{display:flex;flex-direction:column;padding-left:12px;border-left:1px solid var(--line);font-size:12.5px;font-weight:750;color:var(--ink);}
+.executive-topbar .brand-txt small{font-size:9.5px;font-weight:500;color:var(--mut);margin-top:2px;}
+.executive-topbar-actions{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:11px;color:var(--mut);}
+.executive-sync{display:flex;align-items:center;gap:7px;white-space:nowrap;}
+.executive-sync i{width:7px;height:7px;border-radius:99px;background:var(--green);box-shadow:0 0 0 3px var(--green-wash);}
+.executive-avatar{width:36px;height:36px;border:0;border-radius:99px;background:var(--red-wash);color:var(--red-ink);font:800 10.5px Inter,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.executive-main{max-width:1080px;margin:0 auto;padding:30px 22px 64px;}
+.executive-welcome{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px;}
+.executive-welcome h1{font-family:Inter,system-ui,sans-serif;font-style:normal;font-size:28px;letter-spacing:-.035em;margin:0 0 5px;}
+.executive-welcome p{font-size:13px;color:var(--mut);margin:0;}
+.executive-readonly{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 10px;font-size:10.5px;font-weight:700;color:var(--mut);white-space:nowrap;}
+.executive-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px;margin-bottom:14px;}
+.executive-summary-grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(250px,.75fr);gap:14px;align-items:stretch;margin-bottom:14px;}
+.executive-summary-grid>.panel{margin:0;border-radius:12px;}
+.executive-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;}
+.executive-section-head h2,.executive-mix h2{font-family:Inter,system-ui,sans-serif;font-style:normal;font-size:16px;letter-spacing:-.02em;margin:0 0 3px;}
+.executive-section-head p,.executive-mix>p{font-size:10.5px;color:var(--mut);margin:0;}
+.executive-section-head>svg{color:var(--red-ink);}
+.executive-priorities>button{width:100%;display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:10px;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;padding:9px 0;color:inherit;text-align:left;cursor:pointer;}
+.executive-priorities>button:hover{background:var(--panel-bg);}
+.executive-school-icon{width:30px;height:30px;border-radius:8px;background:var(--panel-bg);color:var(--mut);display:flex;align-items:center;justify-content:center;}
+.executive-priorities button>span:nth-child(2){display:flex;flex-direction:column;min-width:0;}
+.executive-priorities button b{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.executive-priorities button small{font-size:9.5px;color:var(--red-ink);margin-top:2px;}
+.executive-priorities button em{font-style:normal;font-size:9.5px;font-weight:650;color:var(--mut);white-space:nowrap;}
+.executive-mix{display:flex;flex-direction:column;}
+.executive-ring{position:relative;width:104px;height:104px;margin:13px auto 10px;}
+.executive-campaign-bar{height:7px;border-radius:99px;background:var(--core);overflow:hidden;margin-top:auto;}
+.executive-campaign-bar span{display:block;height:100%;background:var(--smart);}
+.executive-campaign-legend{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px;font-size:9.5px;color:var(--mut);}
+.executive-campaign-legend span{display:flex;align-items:center;gap:4px;}
+.executive-campaign-legend i{width:7px;height:7px;border-radius:99px;}
+.executive-campaign-legend i.smart{background:var(--smart);}.executive-campaign-legend i.core{background:var(--core);}
+.executive-campaign-legend b{color:var(--ink);}
+.executive-alerts{border-radius:12px;}
+.executive-alerts h3{display:flex;align-items:center;gap:7px;color:var(--ink);}
+.executive-alerts h3 svg{color:var(--red-ink);}
+.executive-portfolio-title{font-family:Inter,system-ui,sans-serif;font-style:normal;font-size:18px;letter-spacing:-.02em;margin:20px 0 0;}
+.executive-school-card{scroll-margin-top:86px;border-radius:12px;}
+
+@media(max-width:820px){
+  .executive-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+  .executive-summary-grid{grid-template-columns:1fr;}
+  .executive-mix{min-height:220px;}
+}
+@media(max-width:600px){
+  .executive-topbar-inner{min-height:62px;padding:0 14px;}
+  .executive-topbar .brand-logo{width:84px;}
+  .executive-topbar .brand-txt{display:none;}
+  .executive-topbar-actions select,.executive-topbar-actions>a,.executive-sync{display:none;}
+  .executive-main{padding:22px 14px 48px;}
+  .executive-welcome{display:block;}
+  .executive-readonly{margin-top:12px;width:max-content;}
+  .executive-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+  .executive-priorities>button{grid-template-columns:30px minmax(0,1fr);}
+  .executive-priorities button em{grid-column:2;}
+}
+
 /* ---- Portal del asesor: aplicación móvil, no página administrativa encogida ---- */
 html{scroll-behavior:smooth;}
 .asesor-page{min-height:100vh;background:#F2F3F5;padding-bottom:92px;}

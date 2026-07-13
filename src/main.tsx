@@ -23,6 +23,7 @@ const devRoutes: Record<string, string> = {
   '#/dev-advisor': '/mi-hoja',
   '#/dev-rentabilidad': '/rentabilidad',
   '#/dev-logistica': '/logistica',
+  '#/dev-ejecutivo': '/mis-colegios',
 }
 const devRoute = import.meta.env.DEV ? devRoutes[window.location.hash] : undefined
 // eslint-disable-next-line react-refresh/only-export-components -- main.tsx es el entry; no aplica fast refresh
