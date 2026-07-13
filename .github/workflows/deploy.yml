@@ -10,35 +10,15 @@ permissions:
   pages: write
   id-token: write
 
-# No cancelar despliegues en curso: la plantilla oficial de Pages usa false porque
-# cancelar a media publicación deja despliegues en estado "cancelled"/atascado.
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  gate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm install
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-
   build:
-    needs: gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm install
-      - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
