@@ -14,6 +14,8 @@ import { NumberTicker } from '../ui/NumberTicker'
 import { ProgressRing } from '../ui/ProgressRing'
 import { useAcceso } from '../lib/accesoCtx'
 import logoSM from '../assets/logo-sm.svg'
+import { Icon } from '../ui/Icon'
+import { AdvisorBottomNav } from '../features/asesor/AdvisorBottomNav'
 
 // ─── Portal del asesor (V3, móvil-first) ──────────────────────────────────────
 // El acceso viene de la sesión global (login por usuario): un asesor entra
@@ -165,17 +167,27 @@ export default function HojaAsesor() {
     setData((d) => agregarAlerta(d, { fecha: new Date().toISOString(), asesorId: asesor.id, colegioId: alCol, tipo: alTipo, descripcion: alDesc.trim() }))
     setAlSent(true)
   }
+  const todayDate = new Date(`${hoy}T12:00:00`)
+  const monday = new Date(todayDate)
+  monday.setDate(todayDate.getDate() - ((todayDate.getDay() + 6) % 7))
+  const weekDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday)
+    date.setDate(monday.getDate() + index)
+    return {
+      label: ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'][index],
+      day: date.getDate(),
+      today: date.toISOString().slice(0, 10) === hoy,
+    }
+  })
 
   // ── Dashboard del asesor ─────────────────────────────────────────────────────
   return (
-    <div className="asesor-page" style={{ minHeight: '100vh', background: 'var(--line)' }}>
-      <header className="app-header">
-        <div className="inner" style={{ maxWidth: 820, flexWrap: 'wrap', rowGap: 6 }}>
-          <div className="brand">
-            <img src={logoSM} alt="SM México" className="brand-logo" />
-            <span className="brand-txt">Portal del asesor<small>Servicios pedagógicos 2026-2027</small></span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--fs-body)', color: 'var(--mut)' }}>
+    <div className="asesor-page" id="asesor-inicio">
+      <header className="advisor-topbar">
+        <div className="advisor-topbar-inner">
+          <img src={logoSM} alt="SM México" className="advisor-logo" />
+          <span className="advisor-product">Portal del asesor</span>
+          <div className="advisor-topbar-actions">
             {esPreview && (<>
               <a className="sec" href="#/planeacion" style={{ textDecoration: 'none' }}>← Volver</a>
               <select value={asesor.id} aria-label="Vista previa: asesor" title="Vista previa: elige el asesor"
@@ -183,15 +195,18 @@ export default function HojaAsesor() {
                 {data.asesores.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
               </select>
             </>)}
-            <span>{status}</span>
-            <button className="sec" onClick={salir}>Salir</button>
+            <span className="advisor-sync">{status}</span>
+            <button className="advisor-icon-button" type="button" aria-label="Notificaciones"><Icon name="bell" size={20} /></button>
+            <button className="advisor-avatar" type="button" onClick={salir} title="Cerrar sesión" aria-label="Cerrar sesión">{asesor.nombre.slice(0, 2).toUpperCase()}</button>
           </div>
         </div>
       </header>
 
-      <div className="asesor-main" style={{ maxWidth: 820, margin: '0 auto', padding: '16px 14px 110px' }}>
-        <h1 style={{ marginBottom: 2 }}>Hola, {asesor.nombre}</h1>
-        <div className="sub">Tu hoja de servicios pedagógicos · {misColegios.length} colegios asignados.</div>
+      <div className="asesor-main advisor-main">
+        <section className="advisor-welcome">
+          <h1>Hola, {asesor.nombre.split(' ')[0]}</h1>
+          <p>Tu agenda y servicios pedagógicos para hoy.</p>
+        </section>
 
         {misColegios.length === 0 ? (
           <div className="panel"><div className="hint">Aún no tienes colegios asignados. Tu coordinador te los asignará pronto.</div></div>
@@ -211,8 +226,11 @@ export default function HojaAsesor() {
           </div>
 
           {/* Agenda próxima */}
-          <div className="panel">
-            <h3>📅 Tu agenda próxima</h3>
+          <div className="panel advisor-panel" id="asesor-agenda">
+            <div className="advisor-section-heading"><h2>Agenda semanal</h2><span>{proximos.length} próximos</span></div>
+            <div className="advisor-week" aria-label="Semana actual">
+              {weekDays.map((day) => <span key={day.label} className={day.today ? 'today' : undefined}><small>{day.label}</small><b>{day.day}</b><i /></span>)}
+            </div>
             {proximos.length === 0
               ? <div className="hint" style={{ margin: 0 }}>No tienes servicios agendados con fecha. Ponles fecha planeada a tus pendientes para organizarte.</div>
               : proximos.map((r) => {
@@ -233,8 +251,8 @@ export default function HojaAsesor() {
 
           {/* Requieren atención */}
           {atencion.length > 0 && (
-            <div className="panel">
-              <h3>⚠️ Requieren tu atención</h3>
+            <div className="panel advisor-panel">
+              <h3 className="advisor-panel-title"><Icon name="alert" size={17} /> Requieren tu atención</h3>
               {atencion.map(({ c, venc, sinFecha, satBaja }) => (
                 <div key={c.id} className="asesor-attention-row" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', padding: '5px 0', borderBottom: '1px solid #F0F2F5', fontSize: 'var(--fs-body)' }}>
                   <span style={{ width: 8, height: 8, borderRadius: 8, background: c.campaign === 'SMART' ? SMART : CORE, flex: '0 0 auto' }} />
@@ -249,8 +267,8 @@ export default function HojaAsesor() {
           )}
 
           {/* Mi cartera */}
-          <div className="panel">
-            <h3>📊 Tu cartera</h3>
+          <div className="panel advisor-panel" id="asesor-cartera">
+            <h3 className="advisor-panel-title"><Icon name="briefcase" size={17} /> Tu cartera</h3>
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start', fontSize: 'var(--fs-body)' }}>
               <div>
                 <div style={{ color: 'var(--mut)', fontSize: 'var(--fs-meta)', marginBottom: 4 }}>Colegios</div>
@@ -277,7 +295,7 @@ export default function HojaAsesor() {
           </div>
 
           {/* Mis colegios: búsqueda + filtros */}
-          <h2 style={{ marginTop: 18 }}>Mis colegios</h2>
+          <h2 className="advisor-colleges-title" id="asesor-colegios">Mis colegios</h2>
           <div className="asesor-filters" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', margin: '6px 0 10px' }}>
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔍 Buscar colegio…"
               aria-label="Buscar colegio" style={{ flex: '1 1 150px', minWidth: 140, fontSize: 'var(--fs-input)', padding: '7px 10px' }} />
@@ -320,11 +338,12 @@ export default function HojaAsesor() {
 
       {/* FAB: caso crítico */}
       {misColegios.length > 0 && (
-        <button onClick={() => abrirAlerta()} aria-label="Reportar caso crítico"
-          style={{ position: 'fixed', right: 16, bottom: 16, zIndex: 60, background: ROJO, color: '#fff', border: 'none',
-            borderRadius: 999, padding: '13px 18px', fontSize: 'var(--fs-title)', fontWeight: 700, fontFamily: 'inherit',
-            boxShadow: '0 4px 16px rgba(0,0,0,.28)', cursor: 'pointer' }}>🚨 Caso crítico</button>
+        <button onClick={() => abrirAlerta()} aria-label="Reportar caso crítico" className="advisor-critical-button">
+          <Icon name="alert" size={18} /> <span>Caso crítico</span>
+        </button>
       )}
+
+      <AdvisorBottomNav />
 
       {/* Modal de alerta (bottom sheet) */}
       {alertaOpen && (

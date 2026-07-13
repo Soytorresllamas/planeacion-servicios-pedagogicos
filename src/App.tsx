@@ -1,13 +1,14 @@
 import { lazy, Suspense } from 'react'
-import { NavLink, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import type { ComponentType, ReactElement } from 'react'
-import logoSM from './assets/logo-sm.svg'
 import { Toaster } from './ui/toast'
 import { RouteSkeleton } from './ui/Skeleton'
 import { useAcceso } from './lib/accesoCtx'
 import { tabsPorRol, rutaInicial, rutaPermitida } from './lib/sesion'
 import { ROLES } from './data/usuarios'
 import { recargarFresca } from './lib/recarga'
+import { AppShell } from './layout/AppShell'
+import type { IconName } from './ui/Icon'
 
 // Los chunks de rutas cambian de nombre en cada deploy y los viejos se borran.
 // Si un navegador tiene el index.html cacheado (GitHub Pages: max-age=600) y pide
@@ -51,32 +52,19 @@ export default function App() {
   const esPortal = path === '/mi-hoja' || path === '/mis-colegios' || path.startsWith('/vista-director')
   const inicio = rutaInicial(sesion.rol)
   const rolLabel = ROLES.find((r) => r.key === sesion.rol)?.label ?? sesion.rol
+  const iconoPorRuta: Record<string, IconName> = {
+    '/simulador': 'sliders',
+    '/planeacion': 'calendar',
+    '/rentabilidad': 'chart',
+    '/logistica': 'truck',
+    '/administracion': 'settings',
+  }
+  const nav = tabsPorRol(sesion.rol).map((item) => ({ ...item, icon: iconoPorRuta[item.to] ?? 'briefcase' }))
 
   // guarda por rol: si la ruta no le toca, lo mandamos a su inicio
   const g = (ruta: string, el: ReactElement) => rutaPermitida(sesion.rol, ruta) ? el : <Navigate to={inicio} replace />
 
-  return (
-    <>
-      {!esPortal && (
-      <header className="app-header">
-        <div className="inner">
-          <div className="brand">
-            <img src={logoSM} alt="SM México" className="brand-logo" />
-            <span className="brand-txt">Servicios Pedagógicos<small>Planeación 2026-2027 · SM México</small></span>
-          </div>
-          <nav className="nav">
-            {tabsPorRol(sesion.rol).map((t) => <NavLink key={t.to} to={t.to}>{t.label}</NavLink>)}
-          </nav>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 11.5, color: 'var(--mut)', textAlign: 'right', lineHeight: 1.3 }}>
-              <b style={{ color: 'var(--ink-2)', fontSize: 12.5 }}>{sesion.nombre}</b><br />{rolLabel}
-            </span>
-            <button className="sec" onClick={salir}>Salir</button>
-          </div>
-        </div>
-      </header>
-      )}
-      <main className={esPortal ? undefined : 'page'}>
+  const contenido = (
         <Suspense fallback={<RouteSkeleton />}>
           <Routes>
             <Route path="/" element={<Navigate to={inicio} replace />} />
@@ -96,7 +84,13 @@ export default function App() {
             <Route path="*" element={<Navigate to={inicio} replace />} />
           </Routes>
         </Suspense>
-      </main>
+  )
+
+  return (
+    <>
+      {esPortal
+        ? <main>{contenido}</main>
+        : <AppShell nav={nav} name={sesion.nombre} role={rolLabel} onLogout={salir}>{contenido}</AppShell>}
       <Toaster />
     </>
   )

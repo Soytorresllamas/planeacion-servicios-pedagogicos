@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { NIVEL_LABEL, normalizarDirector } from '../data/planeacion'
 import type { DirectorData, ServicioDirector, ServTipo, NivelKey, PorNivel, Estatus } from '../data/planeacion'
 import { ProgressRing } from '../ui/ProgressRing'
+import { Icon } from '../ui/Icon'
 
 // Lenguaje para el director (sin jerga interna de la app)
 const TIPO_DIR: Record<ServTipo, { nombre: string; desc: string }> = {
@@ -58,20 +59,24 @@ export function PanelDirector({ d }: { d: DirectorData }) {
   const filaSerie = (k: NivelKey, series?: PorNivel, ingles?: PorNivel): string =>
     [series?.[k], ingles?.[k]].filter(Boolean).join(' · ')
   const haySeries = d.niveles.some((k) => filaSerie(k, d.seriesNivel, d.inglesNivel))
+  const proxima = conFecha.find((s) => s.estatus === 'agendado')
 
   return (
     <div className="dir-wrap" style={{ ['--dir-acc' as string]: acc }}>
       <div className="dir-band">
         <div className="inner">
           <img src={logoSM} alt="SM México" style={{ height: 26 }} />
-          <span style={{ fontFamily: 'Newsreader,serif', fontWeight: 700, fontSize: 15, borderLeft: '1px solid var(--line-2)', paddingLeft: 12 }}>Servicios Pedagógicos</span>
+          <span className="dir-product">Servicios Pedagógicos</span>
           <span className="ciclo">Ciclo escolar<br />2026-2027</span>
         </div>
       </div>
 
       <main className="dir-main">
         <header className="dir-hero card-in" style={{ ['--i' as string]: 0 }}>
-          <div className="prog"><span className="pt" aria-hidden />Programa de acompañamiento pedagógico SM</div>
+          <div className="dir-hero-meta">
+            <div className="prog"><span className="pt" aria-hidden />Programa de acompañamiento pedagógico SM</div>
+            <span className="dir-current"><i /> Información al día</span>
+          </div>
           <h1>{d.nombre}</h1>
           <p style={{ fontSize: 13.5, color: 'var(--mut)', lineHeight: 1.6, margin: 0, maxWidth: '58ch' }}>
             Avance de la implementación del programa en su colegio. Esta página se
@@ -88,6 +93,7 @@ export function PanelDirector({ d }: { d: DirectorData }) {
           <div className="dir-resumen">
             <ProgressRing pct={pct} size={116} stroke={10} color={acc} />
             <div className="datos">
+              <span className="dir-summary-label">Avance general del ciclo</span>
               <p className="frase">
                 {total === 0 ? 'Su plan de sesiones se está preparando.'
                   : hechos === total ? <>¡Programa completado! Las <b>{total}</b> sesiones del ciclo se realizaron.</>
@@ -104,8 +110,16 @@ export function PanelDirector({ d }: { d: DirectorData }) {
                 </div>
               </>)}
             </div>
+            <dl className="dir-summary-stats">
+              <div><dt>Realizadas</dt><dd>{hechos}</dd></div>
+              <div><dt>Programadas</dt><dd>{prog}</dd></div>
+              <div><dt>Por coordinar</dt><dd>{total - hechos - prog}</dd></div>
+            </dl>
           </div>
         </section>
+
+        <div className="dir-content-grid">
+          <div className="dir-content-main">
 
         {porTipo.length > 0 && (
           <section className="dir-panel card-in" style={{ ['--i' as string]: 2 }} aria-label="Avance por tipo de acompañamiento">
@@ -149,8 +163,25 @@ export function PanelDirector({ d }: { d: DirectorData }) {
           </section>
         )}
 
+          </div>
+          <aside className="dir-content-aside">
+            <section className="dir-panel dir-next card-in" style={{ ['--i' as string]: 4 }} aria-label="Próxima sesión">
+              <span className="dir-next-icon"><Icon name="calendar" size={20} /></span>
+              <div>
+                <h2>Próxima sesión</h2>
+                {proxima ? <>
+                  <strong>{TIPO_DIR[proxima.tipo].nombre}</strong>
+                  <p>{proxima.nivel ? `${NIVEL_LABEL[proxima.nivel]} · ` : ''}{fmtLarga(fechaDe(proxima)!)}</p>
+                  <span className="dir-next-status">Fecha confirmada</span>
+                </> : <>
+                  <strong>En coordinación</strong>
+                  <p>Su asesor confirmará con el colegio la siguiente fecha disponible.</p>
+                </>}
+              </div>
+            </section>
+
         {(d.asesor || haySeries) && (
-          <section className="dir-panel card-in" style={{ ['--i' as string]: 4 }} aria-label="Su acompañamiento">
+          <section className="dir-panel card-in" style={{ ['--i' as string]: 5 }} aria-label="Su acompañamiento">
             {d.asesor && (
               <div className="dir-persona" style={{ marginBottom: haySeries ? 16 : 0 }}>
                 <span className="dir-avatar" aria-hidden>{iniciales || 'SM'}</span>
@@ -175,6 +206,8 @@ export function PanelDirector({ d }: { d: DirectorData }) {
             </>)}
           </section>
         )}
+          </aside>
+        </div>
 
         <footer className="dir-foot">
           Preparado por SM México para {d.nombre}.<br />

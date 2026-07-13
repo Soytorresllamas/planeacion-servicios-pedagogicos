@@ -24,6 +24,7 @@ import { DataTable } from '../ui/DataTable'
 import { EmptyState } from '../ui/EmptyState'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
+import { Icon } from '../ui/Icon'
 
 const fmtCorta = (iso?: string) => iso ? iso.slice(5, 10).split('-').reverse().join('/') : '—'
 
@@ -166,7 +167,7 @@ export default function Logistica() {
   )
 
   return (
-    <div>
+    <div className="logistics-page">
       <PageHeader
         title="Logística · viajes y hospedaje"
         status={status}
@@ -177,13 +178,14 @@ export default function Logistica() {
       {/* input file oculto, compartido por todas las celdas */}
       <input ref={fileRef} type="file" accept="application/pdf,.pdf" onChange={onArchivo} style={{ display: 'none' }} aria-hidden />
 
-      <div className="kpis" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))' }}>
-        <KpiCard value={<NumberTicker value={res.filas} />} label="Servicios con necesidad" />
-        <KpiCard tone={res.pendientes > 0 ? 'warn' : 'good'} value={<NumberTicker value={res.pendientes} />} label="Reservas pendientes" />
-        <KpiCard value={<NumberTicker value={res.proximos7} />} label="Viajan en 7 días" />
-        <KpiCard tone="good" value={<NumberTicker value={res.completas} />} label="Completas" />
+      <div className="kpis finance-kpis logistics-kpis">
+        <KpiCard icon={<Icon name="calendar" />} value={<NumberTicker value={res.filas} />} label="Servicios con necesidad" />
+        <KpiCard icon={<Icon name="alert" />} tone={res.pendientes > 0 ? 'warn' : 'good'} value={<NumberTicker value={res.pendientes} />} label="Reservas pendientes" />
+        <KpiCard icon={<Icon name="truck" />} value={<NumberTicker value={res.proximos7} />} label="Viajan en 7 días" />
+        <KpiCard icon={<Icon name="check" />} tone="good" value={<NumberTicker value={res.completas} />} label="Completas" />
       </div>
 
+      <section className="panel logistics-table-panel">
       <FilterBar trailing={filas.length > 0 && <FilterCount>{filas.length.toLocaleString('es-MX')} servicios</FilterCount>}>
         <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔍 Buscar colegio…"
           aria-label="Buscar colegio" style={{ width: 170 }} />
@@ -255,6 +257,7 @@ export default function Logistica() {
         Los PDF (máx 10 MB) viven en almacenamiento privado; el asesor ve los suyos en su portal al abrir el servicio.
         {puedeCargar && ' «Reemplazar» sube un PDF nuevo y elimina el anterior.'}
       </div>
+      </section>
     </div>
   )
 }

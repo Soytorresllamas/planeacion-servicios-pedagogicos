@@ -11,6 +11,8 @@ import { NumberTicker } from '../ui/NumberTicker'
 import { ProgressRing } from '../ui/ProgressRing'
 import { useAcceso } from '../lib/accesoCtx'
 import logoSM from '../assets/logo-sm.svg'
+import { Icon } from '../ui/Icon'
+import { KpiCard } from '../ui/KpiCard'
 
 const fmtCorta = (iso: string) => iso.slice(5, 10).split('-').reverse().join('/')
 
@@ -88,53 +90,90 @@ export default function MisColegios() {
   const nombreColegio = (id: string) => data.colegios.find((c) => c.id === id)?.nombre ?? id
 
   const visibles = mios.filter((c) => !busca || c.nombre.toLowerCase().includes(busca.toLowerCase()))
+  const smartCount = mios.filter((c) => c.campaign === 'SMART').length
+  const coreCount = mios.length - smartCount
+  const prioridades = mios.map((c) => {
+    const done = c.servicios.filter((s) => s.estatus === 'realizado').length
+    const vencidos = c.servicios.filter((s) => urgencia(s, hoy) === 'vencido').length
+    const abiertas = alertasAbiertas.filter((a) => a.colegioId === c.id).length
+    const proxima = c.servicios
+      .filter((s) => s.estatus !== 'realizado' && s.fechaPlan && s.fechaPlan >= hoy)
+      .sort((a, b) => a.fechaPlan!.localeCompare(b.fechaPlan!))[0]
+    return { c, done, vencidos, abiertas, proxima, score: abiertas * 100 + vencidos * 10 + (c.servicios.length - done) }
+  }).filter((p) => p.abiertas > 0 || p.vencidos > 0 || p.done < p.c.servicios.length)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4)
   const toggle = (id: string) => setAbiertos((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n })
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--line)' }}>
-      <header className="app-header">
-        <div className="inner" style={{ maxWidth: 860, flexWrap: 'wrap', rowGap: 6 }}>
+    <div className="executive-page">
+      <header className="executive-topbar">
+        <div className="executive-topbar-inner">
           <div className="brand">
             <img src={logoSM} alt="SM México" className="brand-logo" />
-            <span className="brand-txt">Portal del ejecutivo comercial<small>Servicios pedagógicos 2026-2027</small></span>
+            <span className="brand-txt">Portal comercial<small>Servicios pedagógicos 2026-2027</small></span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--fs-body)', color: 'var(--mut)', marginLeft: 'auto' }}>
+          <div className="executive-topbar-actions">
             {esPreview && (<>
-              <a className="sec" href="#/planeacion" style={{ textDecoration: 'none' }}>← Volver</a>
+              <a className="sec" href="#/planeacion" style={{ textDecoration: 'none' }}>Volver</a>
               <select value={nombreEjecutivo} aria-label="Vista previa: ejecutivo" title="Vista previa: elige el ejecutivo"
                 onChange={(e) => setPreviewNombre(e.target.value)} style={{ width: 'auto', fontSize: 'var(--fs-body)' }}>
                 {ejecutivosConCartera.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </>)}
-            <span>{status}</span>
-            <button className="sec" onClick={salir}>Salir</button>
+            <span className="executive-sync"><i />{status}</span>
+            <button className="executive-avatar" onClick={salir} title="Cerrar sesión" aria-label="Cerrar sesión">
+              {nombreEjecutivo.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
+            </button>
           </div>
         </div>
       </header>
 
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '16px 14px 60px' }}>
-        <h1 style={{ marginBottom: 2 }}>Hola, {esPreview ? nombreEjecutivo : sesion.nombre.split(' ')[0]}</h1>
-        <div className="sub">El estatus de tus {mios.length} colegios y lo que va reportando el equipo pedagógico. Solo lectura: aquí no se edita nada.</div>
+      <main className="executive-main">
+        <section className="executive-welcome">
+          <div>
+            <h1>Hola, {esPreview ? nombreEjecutivo : sesion.nombre.split(' ')[0]}</h1>
+            <p>Tu cartera pedagógica, sus prioridades y la siguiente acción comercial.</p>
+          </div>
+          <span className="executive-readonly"><Icon name="check" size={15} /> Vista de seguimiento</span>
+        </section>
 
         {mios.length === 0 ? (
           <div className="panel"><div className="hint">Ningún colegio del tablero te tiene como «Ejecutivo Responsable» todavía.
             En cuanto se cargue el catálogo de BI con tu nombre, aparecerán aquí.</div></div>
         ) : (<>
           {/* KPIs */}
-          <div className="kpis" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))' }}>
-            <div className="kpi"><div className="v"><NumberTicker value={mios.length} /></div><div className="l">Colegios</div></div>
-            <div className="kpi" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <ProgressRing pct={pct} />
-              <div className="l" style={{ marginTop: 0 }}>Avance<br />({hechos}/{totalServ} sesiones)</div>
-            </div>
-            <div className="kpi"><div className="v"><NumberTicker value={conComentarios} /></div><div className="l">Con comentarios del asesor</div></div>
-            <div className={`kpi ${alertasAbiertas.length > 0 ? 'warn' : 'good'}`}><div className="v"><NumberTicker value={alertasAbiertas.length} /></div><div className="l">Casos críticos abiertos</div></div>
+          <div className="kpis executive-kpis">
+            <KpiCard icon={<Icon name="school" />} value={<NumberTicker value={mios.length} />} label="Colegios en cartera" detail={`${smartCount} SMART · ${coreCount} CORE`} />
+            <KpiCard icon={<Icon name="chart" />} value={`${pct}%`} label="Avance del programa" detail={`${hechos} de ${totalServ} sesiones`} />
+            <KpiCard icon={<Icon name="list" />} value={<NumberTicker value={conComentarios} />} label="Con reporte pedagógico" detail="Comentarios disponibles" />
+            <KpiCard icon={<Icon name="alert" />} tone={alertasAbiertas.length > 0 ? 'warn' : 'good'} value={<NumberTicker value={alertasAbiertas.length} />} label="Casos críticos" detail={alertasAbiertas.length ? 'Requieren seguimiento' : 'Sin casos abiertos'} />
+          </div>
+
+          <div className="executive-summary-grid">
+            <section className="panel executive-priorities">
+              <div className="executive-section-head"><div><h2>Prioridades comerciales</h2><p>Ordenadas por caso crítico, atraso y avance.</p></div><Icon name="arrow-right" /></div>
+              {prioridades.length ? prioridades.map(({ c, done, vencidos, abiertas, proxima }) => (
+                <button type="button" key={c.id} onClick={() => { setAbiertos((prev) => new Set(prev).add(c.id)); document.getElementById(`ej-${c.id}`)?.scrollIntoView({ behavior: 'smooth' }) }}>
+                  <span className="executive-school-icon"><Icon name="school" size={17} /></span>
+                  <span><b>{c.nombre}</b><small>{abiertas ? `${abiertas} caso${abiertas > 1 ? 's' : ''} crítico${abiertas > 1 ? 's' : ''}` : vencidos ? `${vencidos} sesión${vencidos > 1 ? 'es' : ''} vencida${vencidos > 1 ? 's' : ''}` : `${done}/${c.servicios.length} sesiones realizadas`}</small></span>
+                  <em>{proxima?.fechaPlan ? `Próx. ${fmtCorta(proxima.fechaPlan)}` : 'Por coordinar'}</em>
+                </button>
+              )) : <div className="hint">La cartera está al día.</div>}
+            </section>
+            <section className="panel executive-mix">
+              <h2>Lectura de cartera</h2>
+              <p>Distribución por campaña y avance acumulado.</p>
+              <div className="executive-ring"><ProgressRing pct={pct} size={104} stroke={9} /></div>
+              <div className="executive-campaign-bar"><span style={{ width: `${mios.length ? (smartCount / mios.length) * 100 : 0}%` }} /></div>
+              <div className="executive-campaign-legend"><span><i className="smart" />SMART <b>{smartCount}</b></span><span><i className="core" />CORE <b>{coreCount}</b></span></div>
+            </section>
           </div>
 
           {/* reportes recientes (alertas de asesores sobre SUS colegios) */}
           {alertasMias.length > 0 && (
-            <div className="panel">
-              <h3>🚨 Reportes de caso crítico</h3>
+            <div className="panel executive-alerts">
+              <h3><Icon name="alert" size={18} /> Reportes de caso crítico</h3>
               {alertasMias.slice(0, 8).map((a) => (
                 <div key={a.id} style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', padding: '6px 0', borderBottom: '1px solid var(--line)', fontSize: 'var(--fs-body)' }}>
                   <span style={{ color: 'var(--mut)', width: 44, flex: '0 0 auto', fontSize: 'var(--fs-meta)' }}>{fmtCorta(a.fecha.slice(0, 10))}</span>
@@ -151,7 +190,7 @@ export default function MisColegios() {
           )}
 
           {/* cartera */}
-          <h2 style={{ marginTop: 18 }}>Tus colegios</h2>
+          <h2 className="executive-portfolio-title">Tus colegios</h2>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', margin: '6px 0 10px' }}>
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔍 Buscar colegio…"
               aria-label="Buscar colegio" style={{ flex: '1 1 180px', minWidth: 150, fontSize: 'var(--fs-input)', padding: '7px 10px' }} />
@@ -171,7 +210,7 @@ export default function MisColegios() {
                 .sort((a, b) => a.fechaPlan!.localeCompare(b.fechaPlan!))[0]
               const niveles = nivelesDeColegio(c)
               return (
-                <div key={c.id} className="card-in panel" style={{ ['--i' as string]: Math.min(idxV, 8), margin: 0 }}>
+                <div id={`ej-${c.id}`} key={c.id} className="card-in panel executive-school-card" style={{ ['--i' as string]: Math.min(idxV, 8), margin: 0 }}>
                   <button type="button" onClick={() => toggle(c.id)} aria-expanded={abierto}
                     style={{ display: 'flex', gap: 7, alignItems: 'center', cursor: 'pointer', width: '100%', minHeight: 32, textAlign: 'left', background: 'transparent', border: 'none', padding: 0, font: 'inherit', color: 'inherit' }}>
                     <span aria-hidden className={`card-chev${abierto ? ' abierto' : ''}`}>
@@ -255,7 +294,7 @@ export default function MisColegios() {
           </div>
           {visibles.length === 0 && <div className="hint">Ningún colegio coincide con la búsqueda.</div>}
         </>)}
-      </div>
+      </main>
     </div>
   )
 }
