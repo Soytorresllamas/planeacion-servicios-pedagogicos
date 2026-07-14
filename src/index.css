@@ -278,9 +278,9 @@ tr.total td{font-weight:700;background:var(--panel-bg);}
 /* ---- App shell 2026: navegación estable, contenido ejecutivo ---- */
 .app-shell{min-height:100vh;display:grid;grid-template-columns:228px minmax(0,1fr);background:#F4F5F7;}
 .app-sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;min-width:0;background:#131A23;color:#F7F8FA;border-right:1px solid #26303C;z-index:var(--z-sticky,40);}
-.app-sidebar-brand{display:flex;align-items:center;gap:11px;min-height:76px;padding:0 18px;border-bottom:1px solid #29333F;}
-.app-sidebar-logo{width:44px;height:36px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none;}
-.app-sidebar-logo img{width:132px;max-width:none;transform:translateX(43px);}
+.app-sidebar-brand{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:104px;padding:18px;border-bottom:1px solid #29333F;}
+.app-sidebar-logo{width:132px;height:33px;display:flex;align-items:center;justify-content:flex-start;overflow:hidden;flex:none;}
+.app-sidebar-logo img{width:132px;max-width:none;filter:brightness(0) invert(1);}
 .app-sidebar-brand>span:last-child{display:flex;flex-direction:column;line-height:1.15;min-width:0;}
 .app-sidebar-brand b{font-size:14px;letter-spacing:-.01em;}
 .app-sidebar-brand small{font-size:11px;color:#AAB4C0;margin-top:2px;}
