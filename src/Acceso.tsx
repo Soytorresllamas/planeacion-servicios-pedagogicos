@@ -159,6 +159,7 @@ export default function Acceso({ children }: { children: ReactNode }) {
     rol: usuario!.rol,
     nombre: `${usuario!.nombre} ${usuario!.apellido}`.trim(),
     asesorId: usuario!.asesorId,
+    ramaAsesor: usuario!.ramaAsesor,
     ejecutivo: usuario!.ejecutivo,
     gerencia: usuario!.gerencia,
   }

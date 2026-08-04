@@ -200,6 +200,7 @@ export default function Administracion() {
   const [uFecha, setUFecha] = useState(hoyISO())
   const [uRol, setURol] = useState<Rol>('asesor')
   const [uAsesor, setUAsesor] = useState('nueva')  // 'nueva' | id de asesor existente
+  const [uRama, setURama] = useState<'pedagogica' | 'ingles'>('pedagogica')
   const [uEjecutivo, setUEjecutivo] = useState('') // rol ejecutivo: nombre como en «Ejecutivo Responsable»
   const [uGerencia, setUGerencia] = useState('')
   const [creando, setCreando] = useState(false)
@@ -207,8 +208,8 @@ export default function Administracion() {
 
   const asesoresLibres = useMemo(() => {
     const ligados = new Set(usuarios.map((u) => u.asesorId).filter(Boolean))
-    return data.asesores.filter((a) => !ligados.has(a.id))
-  }, [usuarios, data.asesores])
+    return data.asesores.filter((a) => !ligados.has(a.id) && (a.rama ?? 'pedagogica') === uRama)
+  }, [usuarios, data.asesores, uRama])
 
   const crear = async (e: FormEvent) => {
     e.preventDefault()
@@ -217,6 +218,7 @@ export default function Administracion() {
     const r = await crearUsuario({
       nombre: uNombre, apellido: uApellido, correo: uCorreo, fechaIngreso: uFecha, rol: uRol,
       asesorId: asesorExistente,
+      ramaAsesor: uRol === 'asesor' ? uRama : undefined,
       ejecutivo: uRol === 'ejecutivo' ? uEjecutivo.trim() || undefined : undefined,
       gerencia: uRol === 'gerente' ? uGerencia.trim() || undefined : undefined,
     })
@@ -224,14 +226,14 @@ export default function Administracion() {
     let creado = r.usuario
     // rol asesor sin hoja existente → crea su hoja en planeación y la liga al perfil
     if (uRol === 'asesor' && !asesorExistente) {
-      const nuevoAse = { id: `ase-u-${creado.id.slice(0, 8)}`, nombre: `${creado.nombre} ${creado.apellido}`.trim() }
+      const nuevoAse = { id: `ase-u-${creado.id.slice(0, 8)}`, nombre: `${creado.nombre} ${creado.apellido}`.trim(), rama: uRama }
       setData((d) => ({ ...d, asesores: [...d.asesores, nuevoAse] }))
       await patchUsuario(creado.id, { asesorId: nuevoAse.id })
       creado = { ...creado, asesorId: nuevoAse.id }
     }
     setUsuarios((us) => [...us, creado])
     setTempCreada({ nombre: `${creado.nombre} ${creado.apellido}`, correo: creado.correo, pass: r.tempPassword })
-    setUNombre(''); setUApellido(''); setUCorreo(''); setUAsesor('nueva'); setUEjecutivo(''); setUGerencia(''); setCreando(false)
+    setUNombre(''); setUApellido(''); setUCorreo(''); setUAsesor('nueva'); setURama('pedagogica'); setUEjecutivo(''); setUGerencia(''); setCreando(false)
     toast(`Usuario creado: ${creado.correo}`, 'ok')
   }
 
@@ -459,11 +461,17 @@ export default function Administracion() {
                 {ROLES.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
               </select></label>
             {uRol === 'asesor' && (
+              <>
+              <label style={{ flex: '0 1 150px', margin: 0 }}>Rama
+                <select value={uRama} onChange={(e) => { setURama(e.target.value as typeof uRama); setUAsesor('nueva') }} style={{ width: '100%', fontSize: 13, padding: '6px 8px', marginTop: 3 }}>
+                  <option value="pedagogica">Pedagógica</option><option value="ingles">Inglés</option>
+                </select></label>
               <label style={{ flex: '0 1 210px', margin: 0 }}>Hoja de asesor
                 <select value={uAsesor} onChange={(e) => setUAsesor(e.target.value)} style={{ width: '100%', fontSize: 13, padding: '6px 8px', marginTop: 3 }}>
                   <option value="nueva">Crear hoja nueva</option>
                   {asesoresLibres.map((a) => <option key={a.id} value={a.id}>Ligar a: {a.nombre}</option>)}
                 </select></label>
+              </>
             )}
             {uRol === 'ejecutivo' && (
               <label style={{ flex: '0 1 230px', margin: 0 }}>Nombre en «Ejecutivo Responsable»

@@ -62,14 +62,15 @@ export default function Planeacion() {
 
   // asesor seleccionado válido (derivado, sin efecto): cae al primero si el actual no existe
   const target = data.asesores.some((a) => a.id === targetSel) ? targetSel : (data.asesores[0]?.id ?? '')
+  const targetRama = data.asesores.find((a) => a.id === target)?.rama ?? 'pedagogica'
 
   const amt = (key: string) => amounts[key] ?? 1
   const setAmt = (key: string, v: number) => setAmounts((p) => ({ ...p, [key]: Math.max(0, v) }))
 
   const doAssign = (camp: Campaign, tier: TierKey) =>
-    setData((d) => ({ ...d, colegios: asignarPorTipo(d.colegios, camp, tier, amt(camp + '-' + tier), target) }))
+    setData((d) => ({ ...d, colegios: asignarPorTipo(d.colegios, camp, tier, amt(camp + '-' + tier), target, targetRama) }))
   const doRelease = (camp: Campaign, tier: TierKey) =>
-    setData((d) => ({ ...d, colegios: liberarPorTipo(d.colegios, camp, tier, amt(camp + '-' + tier), target) }))
+    setData((d) => ({ ...d, colegios: liberarPorTipo(d.colegios, camp, tier, amt(camp + '-' + tier), target, targetRama) }))
   const regenerar = () => {
     if (!window.confirm('Regenerar cupos desde el Simulador borra las asignaciones y el avance actuales. ¿Continuar?')) return
     setData((d) => ({ ...d, colegios: generateColegios(DEFAULTS.vSmart, DEFAULTS.tiersSmart, DEFAULTS.vCore, DEFAULTS.tiersCore) }))
@@ -93,16 +94,16 @@ export default function Planeacion() {
 
   // cargas de TODOS los asesores en una pasada (memo): antes se llamaba
   // cargaAsesor por cada asesor en 2 loops = O(asesores × colegios) por render.
-  const cargas = useMemo(() => cargasPorAsesor(data.colegios), [data.colegios])
+  const cargas = cargasPorAsesor(data.colegios, targetRama)
   const res = useMemo(() => resumen(data.colegios), [data.colegios])
   const targetName = data.asesores.find((a) => a.id === target)?.nombre ?? '—'
-  const misColegios = data.colegios.filter((c) => c.asesorId === target)
+  const misColegios = data.colegios.filter((c) => targetRama === 'ingles' ? c.asesorInglesId === target : c.asesorId === target)
   const cargaT = cargas.get(target) ?? CARGA_VACIA
   const pctT = cargaT.servicios ? Math.round((cargaT.realizados / cargaT.servicios) * 100) : 0
 
   // agenda / filtros de la hoja
   const hoy = hoyISO()
-  const ag = agendaAsesor(data.colegios, target, hoy)
+  const ag = agendaAsesor(data.colegios, target, hoy, targetRama)
   const filtroColegio = (nombre: string, campaign: Campaign, tier: TierKey, serie?: string, ingles?: string, satisfaccion?: number): boolean => {
     if (busca && !nombre.toLowerCase().includes(busca.toLowerCase())) return false
     if (fCamp !== 'todos' && campaign !== fCamp) return false
@@ -116,6 +117,7 @@ export default function Planeacion() {
     return true
   }
   const pasaServicio = (s: Servicio): boolean => {
+    if (targetRama === 'ingles' ? s.rama !== 'ingles' : s.rama === 'ingles') return false
     if (fEstatus === 'todos') return true
     if (fEstatus === 'vencidos') return urgencia(s, hoy) === 'vencido'
     return s.estatus === fEstatus
@@ -352,14 +354,14 @@ export default function Planeacion() {
 
         <div>
           {view === 'asignacion' && (<>
-            <h2>Asignar a {targetName}</h2>
+            <h2>Asignar a {targetName} · {targetRama === 'ingles' ? 'Inglés' : 'Pedagógico'}</h2>
             <DataTable><table>
               <thead><tr><th>Campaña</th><th>Tipo</th><th>Sin asignar</th><th>De este asesor</th><th>Cantidad</th><th></th></tr></thead>
               <tbody>
                 {CAMPS.flatMap((camp) => TIER_SEED.map((t) => {
                   const key = camp + '-' + t.key
-                  const disp = contarPorTipo(data.colegios, camp, t.key)
-                  const mine = contarPorTipo(data.colegios, camp, t.key, target)
+                  const disp = contarPorTipo(data.colegios, camp, t.key, undefined, targetRama)
+                  const mine = contarPorTipo(data.colegios, camp, t.key, target, targetRama)
                   return (
                     <tr key={key}>
                       <td style={{ color: camp === 'SMART' ? SMART : CORE, fontWeight: 600 }}>{camp}</td>
@@ -466,13 +468,13 @@ export default function Planeacion() {
                       onPatch={(p) => patchCol(c.id, p)}
                       onAgregar={(t) => agregarExtra(c.id, t)}
                       onQuitarExtra={(i) => quitarExtra(c.id, i)}
-                      servFilter={pasaServicio} />
+                      servFilter={pasaServicio} rama={targetRama} />
                   ))}
                 </div>
                 )
               })() : (
                 (() => {
-                  const lista = serviciosDeAsesor(data.colegios, target)
+                  const lista = serviciosDeAsesor(data.colegios, target, targetRama)
                     .filter((r) => filtroColegio(r.colegioNombre, r.campaign, r.tier, r.serie, r.ingles, r.satisfaccion) && pasaServicio(r.servicio))
                     .sort((a, b) => (a.servicio.fechaPlan ?? '9999').localeCompare(b.servicio.fechaPlan ?? '9999'))
                   if (lista.length === 0) return (

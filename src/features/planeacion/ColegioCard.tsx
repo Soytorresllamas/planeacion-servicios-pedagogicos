@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react'
 import { ESTATUS, SATISFACCION, SERIES, INGLES, NIVELES, NIVEL_LABEL, urgencia, nivelesDeColegio, genTokenDirector } from '../../data/planeacion'
-import type { Colegio, Servicio, Estatus, Urgencia, ServTipo, NivelKey, ContactoColegio } from '../../data/planeacion'
+import type { Colegio, Servicio, Estatus, Urgencia, ServTipo, NivelKey, ContactoColegio, RamaAsesor } from '../../data/planeacion'
 import { SMART, CORE, EST_LABEL, SERV_LABEL, URG_BG, tierLabel, segColor } from './colors'
 import { urlReserva } from '../../lib/reservasStore'
 import { toast } from '../../ui/toastBus'
@@ -39,6 +39,8 @@ interface Props {
   onReportar?: () => void
   /** Filtra qué servicios mostrar (coordinador). Por defecto todos. */
   servFilter?: (s: Servicio) => boolean
+  /** Portal del asesor: rama que puede gestionar y cuyo contacto edita. */
+  rama?: RamaAsesor
   /** Coordinación: agrega un taller extra (caso de excepción). */
   onAgregar?: (tipo: ServTipo) => void
   /** Coordinación: quita un taller extra (solo servicios `extra`). */
@@ -46,22 +48,25 @@ interface Props {
 }
 
 /** Tarjeta de colegio compartida: una sub-tarea por línea, barra segmentada, footer y notas. */
-export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editable, onReportar, servFilter, onAgregar, onQuitarExtra }: Props) {
+export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editable, onReportar, servFilter, rama = 'pedagogica', onAgregar, onQuitarExtra }: Props) {
   const [notaKey, setNotaKey] = useState<number | null>(null)
   const [notasOpen, setNotasOpen] = useState(false)
   const [contactoOpen, setContactoOpen] = useState(false)
-  const done = c.servicios.filter((s) => s.estatus === 'realizado').length
-  const total = c.servicios.length
+  const done = c.servicios.filter((s) => (!servFilter || servFilter(s)) && s.estatus === 'realizado').length
+  const total = c.servicios.filter((s) => !servFilter || servFilter(s)).length
   const sat = c.satisfaccion ? SATISFACCION.find((s) => s.v === c.satisfaccion) : null
   const rows = c.servicios.map((s, i) => ({ s, i })).filter(({ s }) => !servFilter || servFilter(s))
   const niveles = nivelesDeColegio(c)
 
   // contacto: parche por campo; si todo queda vacío, el objeto desaparece
   const setCon = (campo: keyof ContactoColegio, valor: string) => {
-    const con: ContactoColegio = { ...c.contacto, [campo]: valor || undefined }
-    onPatch({ contacto: con.nombre || con.rol || con.telefono || con.correo ? con : undefined })
+    const actual = rama === 'ingles' ? c.contactoIngles : c.contacto
+    const con: ContactoColegio = { ...actual, [campo]: valor || undefined }
+    const next = con.nombre || con.rol || con.telefono || con.correo ? con : undefined
+    onPatch(rama === 'ingles' ? { contactoIngles: next } : { contacto: next })
   }
-  const conResumen = [c.contacto?.nombre, c.contacto?.rol, c.contacto?.telefono, c.contacto?.correo].filter(Boolean).join(' · ')
+  const contacto = rama === 'ingles' ? c.contactoIngles : c.contacto
+  const conResumen = [contacto?.nombre, contacto?.rol, contacto?.telefono, contacto?.correo].filter(Boolean).join(' · ')
 
   // niveles del colegio: chips toggle (materializa la lista aunque venga derivada)
   const toggleNivel = (k: NivelKey) => {
@@ -283,20 +288,20 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
           style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 'var(--fs-body)', fontWeight: 600, color: 'var(--ink-2)', padding: '8px 0 0', display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', minWidth: 0 }}>
           <span aria-hidden style={{ fontSize: 'var(--fs-caption)', color: 'var(--mut)', flex: '0 0 auto' }}>{contactoOpen ? '▾' : '▸'}</span>
           <span aria-hidden style={{ flex: '0 0 auto' }}>📇</span>
-          <span style={{ flex: '0 0 auto' }}>Contacto</span>
+          <span style={{ flex: '0 0 auto' }}>{rama === 'ingles' ? 'Contacto Inglés' : 'Contacto'}</span>
           {conResumen && !contactoOpen && (
             <span style={{ fontWeight: 400, color: 'var(--mut)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>— {conResumen}</span>
           )}
         </button>
         {contactoOpen && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 6, marginTop: 6 }}>
-            <input value={c.contacto?.nombre ?? ''} placeholder="Nombre" aria-label="Nombre del contacto"
+            <input value={contacto?.nombre ?? ''} placeholder="Nombre" aria-label={rama === 'ingles' ? 'Nombre del contacto Inglés' : 'Nombre del contacto'}
               onChange={(e) => setCon('nombre', e.target.value)} style={{ fontSize: 'var(--fs-input)', padding: '6px 8px' }} />
-            <input value={c.contacto?.rol ?? ''} placeholder="Rol (p.ej. Coordinadora académica)" aria-label="Rol del contacto"
+            <input value={contacto?.rol ?? ''} placeholder="Rol (p.ej. Coordinadora académica)" aria-label="Rol del contacto"
               onChange={(e) => setCon('rol', e.target.value)} style={{ fontSize: 'var(--fs-input)', padding: '6px 8px' }} />
-            <input type="tel" value={c.contacto?.telefono ?? ''} placeholder="Teléfono" aria-label="Teléfono del contacto"
+            <input type="tel" value={contacto?.telefono ?? ''} placeholder="Teléfono" aria-label="Teléfono del contacto"
               onChange={(e) => setCon('telefono', e.target.value)} style={{ fontSize: 'var(--fs-input)', padding: '6px 8px' }} />
-            <input type="email" value={c.contacto?.correo ?? ''} placeholder="Correo" aria-label="Correo del contacto"
+            <input type="email" value={contacto?.correo ?? ''} placeholder="Correo" aria-label="Correo del contacto"
               onChange={(e) => setCon('correo', e.target.value)} style={{ fontSize: 'var(--fs-input)', padding: '6px 8px' }} />
           </div>
         )}

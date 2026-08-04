@@ -9,7 +9,7 @@ import {
   nivelesDeColegio, agregarServicioExtra, quitarServicioExtra,
   genTokenDirector, datosDirector, normalizarDirector, colegiosDeEjecutivo, normNombre,
   marcarNecesidadViaje, filasViajes, estadoReserva, resumenViajes,
-  detectarCambios, importarColegios,
+  detectarCambios, importarColegios, serviciosDeIngles, tieneIngles,
   seguimientoColegio, resumenGerencia, resumenEjecutivos,
 } from './planeacion';
 import type { Servicio, Colegio } from './planeacion';
@@ -29,6 +29,32 @@ describe('serviciosDeTier', () => {
   it('un tipo con 0 didácticas no crea servicios de ese tipo', () => {
     const bajo = { key: 'bajo' as const, label: 'Bajo', pct: 25, uso: 1, prof: 1, didac: 0 };
     expect(serviciosDeTier(bajo).filter((x) => x.tipo === 'didac')).toHaveLength(0);
+  });
+});
+
+describe('rama Inglés', () => {
+  it('genera servicios distintos por campaña, tier y nivel', () => {
+    const smart = serviciosDeIngles('SMART', 'medio', ['pri']);
+    const core = serviciosDeIngles('CORE', 'medio', ['pri']);
+    expect(smart.filter((s) => s.tipo === 'prof').length).not.toBe(core.filter((s) => s.tipo === 'prof').length);
+    expect(smart.every((s) => s.rama === 'ingles' && s.nivel === 'pri')).toBe(true);
+    expect(serviciosDeIngles('SMART', 'medio', ['pre']).length).not.toBe(serviciosDeIngles('SMART', 'medio', ['sec']).length);
+  });
+
+  it('detecta inglés por catálogo o por nivel', () => {
+    expect(tieneIngles({ ingles: 'Bright Sparks' })).toBe(true);
+    expect(tieneIngles({ inglesNivel: { sec: 'Winglish' } })).toBe(true);
+    expect(tieneIngles({})).toBe(false);
+  });
+
+  it('la importación crea automáticamente la segunda rama', () => {
+    const r = importarColegios(defaultPlaneacion(), [{
+      nombre: 'Colegio Inglés', campaign: 'SMART', tier: 'medio', ingles: 'Bright Sparks',
+      niveles: ['pri'], asesorPed: 'Ana',
+    }]);
+    const c = r.data.colegios[0];
+    expect(c.servicios.some((s) => s.rama === 'ingles')).toBe(true);
+    expect(c.servicios.some((s) => s.rama !== 'ingles')).toBe(true);
   });
 });
 

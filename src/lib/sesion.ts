@@ -7,6 +7,7 @@ export interface Sesion {
   rol: Rol;
   nombre: string;      // para el saludo/encabezado
   asesorId?: string;   // rol asesor: su hoja
+  ramaAsesor?: 'pedagogica' | 'ingles';
   ejecutivo?: string;  // rol ejecutivo: su nombre de «Ejecutivo Responsable» (casa sus colegios)
   gerencia?: string;   // rol gerente: su gerencia regional
 }

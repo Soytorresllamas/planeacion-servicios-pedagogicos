@@ -24,6 +24,7 @@ export interface Usuario {
   apellido: string;
   rol: Rol;
   asesorId?: string;       // rol asesor: liga con Asesor de planeación
+  ramaAsesor?: 'pedagogica' | 'ingles'; // rol asesor: rama que puede gestionar
   ejecutivo?: string;      // rol ejecutivo: su nombre como viene en «Ejecutivo Responsable» del BI
   gerencia?: string;       // rol gerente: gerencia regional asignada
   fechaIngreso?: string;   // ISO 'YYYY-MM-DD' (ingreso a SM)

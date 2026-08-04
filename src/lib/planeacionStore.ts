@@ -14,6 +14,7 @@ import { supabase, PLANEACION_TABLE, PLANEACION_ROW, PROJECT_REF } from './supab
 import { LS_PLANEACION } from './localData';
 import { respaldarSiNuevoDia } from './respaldos';
 import { isDemoMode } from './demoMode';
+import { asegurarServiciosDeIngles } from '../data/planeacion';
 import type { PlaneacionData, Colegio, Asesor, Alerta } from '../data/planeacion';
 
 export const T_COLEGIOS = 'psp_colegios';
@@ -39,7 +40,9 @@ export const loadLocal = (): PlaneacionData | null => {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { v?: number; backend?: string; data?: unknown };
     // Solo se acepta el formato versionado actual y del backend actual.
-    if (parsed && parsed.v === SCHEMA_V && parsed.backend === PROJECT_REF && valid(parsed.data)) return parsed.data;
+    if (parsed && parsed.v === SCHEMA_V && parsed.backend === PROJECT_REF && valid(parsed.data)) return {
+      ...parsed.data, colegios: parsed.data.colegios.map(asegurarServiciosDeIngles),
+    };
   } catch { /* noop */ }
   return null;
 };
@@ -88,13 +91,13 @@ export async function loadRemote(): Promise<LoadRemoteResult> {
   try {
     const [cols, ases, ales] = await Promise.all([
       todas<{ data: Colegio }>(T_COLEGIOS, 'data', 'orden'),
-      todas<{ id: string; nombre: string }>(T_ASESORES, 'id,nombre', 'orden'),
+      todas<{ id: string; nombre: string; rama: 'pedagogica' | 'ingles' }>(T_ASESORES, 'id,nombre,rama', 'orden'),
       todas<{ data: Alerta }>(T_ALERTAS, 'data', 'updated_at'),
     ]);
     if (cols.length) {
       const data: PlaneacionData = {
-        colegios: cols.map((r) => r.data),
-        asesores: ases.map((r) => ({ id: r.id, nombre: r.nombre })),
+        colegios: cols.map((r) => asegurarServiciosDeIngles(r.data)),
+        asesores: ases.map((r) => ({ id: r.id, nombre: r.nombre, rama: r.rama ?? 'pedagogica' })),
         alertas: ales.map((r) => r.data),
       };
       if (valid(data)) {
@@ -133,7 +136,7 @@ export async function guardarColegios(colegios: Colegio[]): Promise<R> {
 export async function guardarAsesores(items: { asesor: Asesor; orden: number }[]): Promise<R> {
   if (!items.length) return { ok: true };
   try {
-    const filas = items.map(({ asesor, orden }) => ({ id: asesor.id, nombre: asesor.nombre, orden, updated_at: ahora() }));
+    const filas = items.map(({ asesor, orden }) => ({ id: asesor.id, nombre: asesor.nombre, rama: asesor.rama ?? 'pedagogica', orden, updated_at: ahora() }));
     const { error } = await supabase.from(T_ASESORES).upsert(filas, { onConflict: 'id' });
     return { ok: !error, error };
   } catch (e) { return { ok: false, error: e }; }

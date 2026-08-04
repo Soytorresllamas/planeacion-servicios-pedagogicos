@@ -6,6 +6,8 @@ import type { Tier, TierKey, Campaign } from './model';
 
 export type Estatus = 'pendiente' | 'agendado' | 'realizado';
 export type ServTipo = 'uso' | 'prof' | 'didac';
+export type RamaServicio = 'pedagogica' | 'ingles';
+export type RamaAsesor = 'pedagogica' | 'ingles';
 
 export const ESTATUS: Estatus[] = ['pendiente', 'agendado', 'realizado'];
 export const SERV_LABEL: Record<ServTipo, string> = { uso: 'Uso', prof: 'Profundización', didac: 'Didáctica' };
@@ -35,6 +37,8 @@ export const SATISFACCION: Carita[] = [
 
 export interface Servicio {
   tipo: ServTipo;
+  /** Undefined on legacy rows means pedagogical; English rows are explicit. */
+  rama?: RamaServicio;
   estatus: Estatus;
   fechaPlan?: string;   // ISO 'YYYY-MM-DD'
   fechaReal?: string;
@@ -72,6 +76,7 @@ export interface Colegio {
   campaign: Campaign;
   tier: TierKey;
   asesorId: string | null;   // null = sin asignar (lo cubren externos)
+  asesorInglesId?: string | null;
   servicios: Servicio[];     // congelados al generar
   // metadatos del colegio (opcionales, editables en la hoja del asesor)
   serie?: string;            // p.ej. Acierta, Revuela Up
@@ -80,6 +85,7 @@ export interface Colegio {
   notasGenerales?: string;
   niveles?: NivelKey[];      // niveles escolares que tiene el colegio (general)
   contacto?: ContactoColegio;
+  contactoIngles?: ContactoColegio;
   tokenDirector?: string;    // token del enlace público del director; sin token = sin enlace
   // ── datos del CRM (carga masiva; ver docs/06-rentabilidad.md) ──
   idCrm?: string;
@@ -93,7 +99,7 @@ export interface Colegio {
   otraSerie?: string;
 }
 
-export interface Asesor { id: string; nombre: string; }
+export interface Asesor { id: string; nombre: string; rama?: RamaAsesor; }
 
 // Alertas de caso crítico: el asesor las levanta desde su portal; el coordinador las ve en Planeación.
 export type ProblemaKey = 'materiales' | 'atencion' | 'facturacion' | 'otros';
@@ -138,6 +144,61 @@ export function serviciosDeTier(tier: Tier): Servicio[] {
   };
   add('uso', tier.uso); add('prof', tier.prof); add('didac', tier.didac);
   return out;
+}
+
+/**
+ * Matriz provisional de Inglés.
+ *
+ * Es deliberadamente independiente de la matriz pedagógica: los valores cambian
+ * por campaña, categoría y nivel. Los valores oficiales deben sustituirse aquí
+ * cuando Planeación los confirme; la interfaz y la seguridad no dependen de ellos.
+ */
+export const INGLES_MATRIZ_PROVISIONAL = {
+  SMART: {
+    top: { uso: 2, prof: 1, didac: 1 }, alto: { uso: 1, prof: 1, didac: 1 },
+    medio: { uso: 1, prof: 1, didac: 0 }, bajo: { uso: 1, prof: 0, didac: 0 },
+  },
+  CORE: {
+    top: { uso: 1, prof: 2, didac: 1 }, alto: { uso: 1, prof: 1, didac: 1 },
+    medio: { uso: 1, prof: 0, didac: 1 }, bajo: { uso: 0, prof: 1, didac: 0 },
+  },
+} as const satisfies Record<Campaign, Record<TierKey, Record<ServTipo, number>>>;
+
+const INGLES_MODIFICADOR_NIVEL: Record<NivelKey, Partial<Record<ServTipo, number>>> = {
+  pre: { uso: 1 }, pri: { uso: 1, prof: 1 }, sec: { prof: 1, didac: 1 }, bach: { prof: 1, didac: 1 },
+};
+
+/** Genera servicios de Inglés para una combinación concreta de campaña/tier/niveles. */
+export function serviciosDeIngles(campaign: Campaign, tier: TierKey, niveles: NivelKey[] = []): Servicio[] {
+  const base = INGLES_MATRIZ_PROVISIONAL[campaign][tier];
+  const nivelesActivos = niveles.length ? niveles : (['pre', 'pri', 'sec', 'bach'] as NivelKey[]);
+  const out: Servicio[] = [];
+  for (const nivel of nivelesActivos) {
+    const mod = INGLES_MODIFICADOR_NIVEL[nivel];
+    (Object.keys(base) as ServTipo[]).forEach((tipo) => {
+      const count = Math.max(0, base[tipo] + (mod[tipo] ?? 0));
+      for (let i = 0; i < count; i++) out.push({ tipo, rama: 'ingles', nivel, estatus: 'pendiente' });
+    });
+  }
+  return out;
+}
+
+/** Detecta si el colegio tiene oferta de Inglés en cualquier nivel. */
+export function tieneIngles(c: Pick<Colegio, 'ingles' | 'inglesNivel'>): boolean {
+  return Boolean(c.ingles?.trim() || Object.values(c.inglesNivel ?? {}).some(Boolean));
+}
+
+/** Servicios de ambas ramas, generados al importar o crear un colegio. */
+export function serviciosIniciales(campaign: Campaign, tier: TierKey, niveles: NivelKey[] = [], ingles = false): Servicio[] {
+  const tiers = campaign === 'SMART' ? DEFAULTS.tiersSmart : DEFAULTS.tiersCore;
+  const seed = tiers.find((t) => t.key === tier) ?? tiers[0];
+  return [...serviciosDeTier(seed), ...(ingles ? serviciosDeIngles(campaign, tier, niveles) : [])];
+}
+
+/** Añade la rama Inglés a filas antiguas que ya contienen oferta de inglés. */
+export function asegurarServiciosDeIngles(c: Colegio): Colegio {
+  if (!tieneIngles(c) || c.servicios.some((s) => s.rama === 'ingles')) return c;
+  return { ...c, servicios: [...c.servicios, ...serviciosDeIngles(c.campaign, c.tier, nivelesDeColegio(c))] };
 }
 
 /** Reparte vTotal colegios entre los tipos según su % de mezcla, con **restos mayores**:
@@ -202,31 +263,32 @@ export function resumen(colegios: Colegio[]): Resumen {
 }
 
 /** Asigna a `asesorId` los primeros `count` cupos SIN asignar de (campaña, tipo). */
-export function asignarPorTipo(colegios: Colegio[], campaign: Campaign, tier: TierKey, count: number, asesorId: string): Colegio[] {
+export function asignarPorTipo(colegios: Colegio[], campaign: Campaign, tier: TierKey, count: number, asesorId: string, rama: RamaAsesor = 'pedagogica'): Colegio[] {
   const ids = new Set<string>();
   for (const c of colegios) {
     if (ids.size >= count) break;
-    if (c.campaign === campaign && c.tier === tier && c.asesorId === null) ids.add(c.id);
+    if (c.campaign === campaign && c.tier === tier && (rama === 'ingles' ? !c.asesorInglesId : c.asesorId === null)) ids.add(c.id);
   }
-  return asignar(colegios, ids, asesorId);
+  return colegios.map((c) => ids.has(c.id) ? (rama === 'ingles' ? { ...c, asesorInglesId: asesorId } : { ...c, asesorId }) : c);
 }
 
 /** Libera (deja sin asignar) los primeros `count` cupos de (campaña, tipo) que tenga `asesorId`. */
-export function liberarPorTipo(colegios: Colegio[], campaign: Campaign, tier: TierKey, count: number, asesorId: string): Colegio[] {
+export function liberarPorTipo(colegios: Colegio[], campaign: Campaign, tier: TierKey, count: number, asesorId: string, rama: RamaAsesor = 'pedagogica'): Colegio[] {
   const ids = new Set<string>();
   for (const c of colegios) {
     if (ids.size >= count) break;
-    if (c.campaign === campaign && c.tier === tier && c.asesorId === asesorId) ids.add(c.id);
+    if (c.campaign === campaign && c.tier === tier && (rama === 'ingles' ? c.asesorInglesId === asesorId : c.asesorId === asesorId)) ids.add(c.id);
   }
-  return asignar(colegios, ids, null);
+  return colegios.map((c) => ids.has(c.id) ? (rama === 'ingles' ? { ...c, asesorInglesId: null } : { ...c, asesorId: null }) : c);
 }
 
 /** Cuenta cupos por (campaña, tipo). Con `asesorId` undefined cuenta los SIN asignar. */
-export function contarPorTipo(colegios: Colegio[], campaign: Campaign, tier: TierKey, asesorId?: string | null): number {
+export function contarPorTipo(colegios: Colegio[], campaign: Campaign, tier: TierKey, asesorId?: string | null, rama: RamaAsesor = 'pedagogica'): number {
   return colegios.reduce((s, c) => {
     if (c.campaign !== campaign || c.tier !== tier) return s;
-    if (asesorId === undefined) return s + (c.asesorId === null ? 1 : 0);
-    return s + (c.asesorId === asesorId ? 1 : 0);
+    const owner = rama === 'ingles' ? c.asesorInglesId : c.asesorId;
+    if (asesorId === undefined) return s + (!owner ? 1 : 0);
+    return s + (owner === asesorId ? 1 : 0);
   }, 0);
 }
 
@@ -535,12 +597,12 @@ export function resumenEjecutivos(colegios: Colegio[], gerencia?: string, alerta
 }
 
 export interface Carga { colegios: number; servicios: number; realizados: number; usoProf: number; }
-export function cargaAsesor(colegios: Colegio[], asesorId: string): Carga {
+export function cargaAsesor(colegios: Colegio[], asesorId: string, rama: RamaAsesor = 'pedagogica'): Carga {
   let cols = 0, servicios = 0, realizados = 0, usoProf = 0;
   for (const c of colegios) {
-    if (c.asesorId !== asesorId) continue;
+    if (rama === 'ingles' ? c.asesorInglesId !== asesorId : c.asesorId !== asesorId) continue;
     cols++;
-    for (const s of c.servicios) {
+    for (const s of c.servicios.filter((s) => rama === 'ingles' ? s.rama === 'ingles' : s.rama !== 'ingles')) {
       servicios++;
       if (s.estatus === 'realizado') realizados++;
       if (s.tipo !== 'didac') usoProf++;   // didácticas las hacen externos aunque el colegio esté asignado
@@ -553,14 +615,15 @@ export function cargaAsesor(colegios: Colegio[], asesorId: string): Carga {
  *  Evita el O(asesores × colegios) de llamar cargaAsesor por cada asesor en un
  *  loop de render (con el catálogo real serían cientos de miles de iteraciones).
  *  `cargasPorAsesor(cols).get(id)` == `cargaAsesor(cols, id)`. */
-export function cargasPorAsesor(colegios: Colegio[]): Map<string, Carga> {
+export function cargasPorAsesor(colegios: Colegio[], rama: RamaAsesor = 'pedagogica'): Map<string, Carga> {
   const m = new Map<string, Carga>();
   for (const c of colegios) {
-    if (!c.asesorId) continue;
-    let g = m.get(c.asesorId);
-    if (!g) { g = { colegios: 0, servicios: 0, realizados: 0, usoProf: 0 }; m.set(c.asesorId, g); }
+    const asesorId = rama === 'ingles' ? c.asesorInglesId : c.asesorId;
+    if (!asesorId) continue;
+    let g = m.get(asesorId);
+    if (!g) { g = { colegios: 0, servicios: 0, realizados: 0, usoProf: 0 }; m.set(asesorId, g); }
     g.colegios++;
-    for (const s of c.servicios) {
+    for (const s of c.servicios.filter((s) => rama === 'ingles' ? s.rama === 'ingles' : s.rama !== 'ingles')) {
       g.servicios++;
       if (s.estatus === 'realizado') g.realizados++;
       if (s.tipo !== 'didac') g.usoProf++;
@@ -595,11 +658,11 @@ export function urgencia(s: Servicio, hoy: string): Urgencia {
 }
 
 export interface AgendaResumen { vencidos: number; estaSemana: number; porHacer: number; }
-export function agendaAsesor(colegios: Colegio[], asesorId: string, hoy: string): AgendaResumen {
+export function agendaAsesor(colegios: Colegio[], asesorId: string, hoy: string, rama: RamaAsesor = 'pedagogica'): AgendaResumen {
   let vencidos = 0, estaSemana = 0, porHacer = 0;
   for (const c of colegios) {
-    if (c.asesorId !== asesorId) continue;
-    for (const s of c.servicios) {
+    if (rama === 'ingles' ? c.asesorInglesId !== asesorId : c.asesorId !== asesorId) continue;
+    for (const s of c.servicios.filter((s) => rama === 'ingles' ? s.rama === 'ingles' : s.rama !== 'ingles')) {
       if (s.estatus === 'realizado') continue;
       porHacer++;
       const u = urgencia(s, hoy);
@@ -613,17 +676,21 @@ export function agendaAsesor(colegios: Colegio[], asesorId: string, hoy: string)
 export interface ServicioRef {
   colegioId: string; colegioNombre: string; campaign: Campaign; tier: TierKey;
   serie?: string; ingles?: string; satisfaccion?: number;
-  idx: number; servicio: Servicio;
+  idx: number; servicio: Servicio; rama: RamaServicio;
 }
 /** Aplana los servicios de un asesor (para la vista agenda). */
-export function serviciosDeAsesor(colegios: Colegio[], asesorId: string): ServicioRef[] {
+export function serviciosDeAsesor(colegios: Colegio[], asesorId: string, rama: RamaAsesor = 'pedagogica'): ServicioRef[] {
   const out: ServicioRef[] = [];
   for (const c of colegios) {
-    if (c.asesorId !== asesorId) continue;
-    c.servicios.forEach((servicio, idx) => out.push({
+    if (rama === 'ingles' ? c.asesorInglesId !== asesorId : c.asesorId !== asesorId) continue;
+    c.servicios.forEach((servicio, idx) => {
+      if (rama === 'ingles' ? servicio.rama !== 'ingles' : servicio.rama === 'ingles') return;
+      out.push({
       colegioId: c.id, colegioNombre: c.nombre, campaign: c.campaign, tier: c.tier,
       serie: c.serie, ingles: c.ingles, satisfaccion: c.satisfaccion, idx, servicio,
-    }));
+      rama: servicio.rama ?? 'pedagogica',
+      });
+    });
   }
   return out;
 }
@@ -658,7 +725,7 @@ export interface FilaColegio {
   ejecutivo?: string;      // ejecutivo comercial (queda como dato del colegio)
   asesorPed?: string;      // asesor pedagógico → se casa/crea como asesor y recibe el colegio
   antiguedad?: number;
-  seriesNivel?: PorNivel; inglesNivel?: PorNivel; otraSerie?: string;
+  seriesNivel?: PorNivel; ingles?: string; inglesNivel?: PorNivel; otraSerie?: string;
   niveles?: NivelKey[];    // niveles escolares del colegio (columna «Niveles» o derivados)
   contacto?: ContactoColegio;
 }
@@ -691,9 +758,6 @@ export function importarColegios(data: PlaneacionData, filas: FilaColegio[]): { 
   const porCampaign: Record<Campaign, number> = { SMART: 0, CORE: 0 };
 
   for (const f of filas) {
-    const tiers = f.campaign === 'SMART' ? DEFAULTS.tiersSmart : DEFAULTS.tiersCore;
-    const seed = tiers.find((t) => t.key === f.tier) ?? tiers[0];
-
     // id estable: primero el id de CRM, luego la clave, luego el nombre
     let id = f.idCrm ? `crm-${slug(f.idCrm)}` : f.clave ? `cve-${slug(f.clave)}` : `imp-${slug(f.nombre)}`;
     for (let n = 2; idsUsados.has(id); n++) id = `${id.replace(/~\d+$/, '')}~${n}`;
@@ -714,13 +778,15 @@ export function importarColegios(data: PlaneacionData, filas: FilaColegio[]): { 
     }
 
     porCampaign[f.campaign]++;
+    const niveles = f.niveles?.length ? f.niveles : nivelesDeColegio({ niveles: undefined, seriesNivel: f.seriesNivel, inglesNivel: f.inglesNivel });
+    const ingles = f.ingles?.trim() || Object.values(f.inglesNivel ?? {}).find(Boolean) || undefined;
     colegios.push({
       id, nombre: f.nombre, campaign: f.campaign, tier: f.tier, asesorId,
-      servicios: serviciosDeTier(seed),
+      servicios: serviciosIniciales(f.campaign, f.tier, niveles, Boolean(ingles)),
       idCrm: f.idCrm, clave: f.clave, valorReal: f.valorReal,
       gerencia: f.gerencia, ejecutivo: f.ejecutivo, antiguedad: f.antiguedad,
-      seriesNivel: f.seriesNivel, inglesNivel: f.inglesNivel, otraSerie: f.otraSerie,
-      niveles: f.niveles, contacto: f.contacto,
+      seriesNivel: f.seriesNivel, ingles, inglesNivel: f.inglesNivel, otraSerie: f.otraSerie,
+      niveles, contacto: f.contacto,
     });
   }
 

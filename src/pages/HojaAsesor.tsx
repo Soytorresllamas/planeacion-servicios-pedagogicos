@@ -105,11 +105,14 @@ export default function HojaAsesor() {
   // (sin useMemo: hay un early-return arriba por «asesor sin hoja», y los hooks
   //  no pueden ir después de un return condicional. Cada cálculo es O(colegios)
   //  una vez — aceptable para el portal de UN asesor.)
-  const misColegios = data.colegios.filter((c) => c.asesorId === asesor.id)
-  const carga = cargaAsesor(data.colegios, asesor.id)
+  const rama = (sesion.ramaAsesor ?? asesor.rama ?? 'pedagogica')
+  const esIngles = rama === 'ingles'
+  const filtraRama = (s: Servicio) => esIngles ? s.rama === 'ingles' : s.rama !== 'ingles'
+  const misColegios = data.colegios.filter((c) => esIngles ? c.asesorInglesId === asesor.id : c.asesorId === asesor.id)
+  const carga = cargaAsesor(data.colegios, asesor.id, rama)
   const pct = carga.servicios ? Math.round((carga.realizados / carga.servicios) * 100) : 0
-  const ag = agendaAsesor(data.colegios, asesor.id, hoy)
-  const refs = serviciosDeAsesor(data.colegios, asesor.id)
+  const ag = agendaAsesor(data.colegios, asesor.id, hoy, rama)
+  const refs = serviciosDeAsesor(data.colegios, asesor.id, rama)
   const perAseCap = Math.round(DEFAULTS.tDay * DEFAULTS.dWeek * DEFAULTS.wMonth * 12)
   const pctCap = Math.min(100, Math.round((carga.usoProf / perAseCap) * 100))
 
@@ -119,8 +122,8 @@ export default function HojaAsesor() {
     .slice(0, 6)
 
   const atencion = misColegios.map((c) => {
-    const venc = c.servicios.filter((s) => urgencia(s, hoy) === 'vencido').length
-    const sinFecha = c.servicios.filter((s) => s.estatus === 'pendiente' && !s.fechaPlan).length
+    const venc = c.servicios.filter((s) => filtraRama(s) && urgencia(s, hoy) === 'vencido').length
+    const sinFecha = c.servicios.filter((s) => filtraRama(s) && s.estatus === 'pendiente' && !s.fechaPlan).length
     const satBaja = (c.satisfaccion ?? 0) > 0 && (c.satisfaccion ?? 0) <= 2
     return { c, venc, sinFecha, satBaja, score: venc * 100 + (satBaja ? 50 : 0) + sinFecha }
   }).filter((x) => x.venc > 0 || x.satBaja || x.sinFecha > 0)
@@ -137,9 +140,9 @@ export default function HojaAsesor() {
     if (busca && !c.nombre.toLowerCase().includes(busca.toLowerCase())) return false
     if (fCamp !== 'todos' && c.campaign !== fCamp) return false
     if (fTier !== 'todos' && c.tier !== fTier) return false
-    if (fEstado === 'vencidos' && !c.servicios.some((s) => urgencia(s, hoy) === 'vencido')) return false
-    if (fEstado === 'pendientes' && !c.servicios.some((s) => s.estatus !== 'realizado')) return false
-    if (fEstado === 'completos' && c.servicios.some((s) => s.estatus !== 'realizado')) return false
+    if (fEstado === 'vencidos' && !c.servicios.some((s) => filtraRama(s) && urgencia(s, hoy) === 'vencido')) return false
+    if (fEstado === 'pendientes' && !c.servicios.some((s) => filtraRama(s) && s.estatus !== 'realizado')) return false
+    if (fEstado === 'completos' && c.servicios.some((s) => filtraRama(s) && s.estatus !== 'realizado')) return false
     return true
   })
   const filtrosActivos = busca !== '' || fCamp !== 'todos' || fTier !== 'todos' || fEstado !== 'todos'
@@ -186,7 +189,7 @@ export default function HojaAsesor() {
       <header className="advisor-topbar">
         <div className="advisor-topbar-inner">
           <img src={logoSM} alt="SM México" className="advisor-logo" />
-          <span className="advisor-product">Portal del asesor</span>
+          <span className="advisor-product">Portal del asesor · {esIngles ? 'Inglés' : 'Pedagógico'}</span>
           <div className="advisor-topbar-actions">
             {esPreview && (<>
               <a className="sec" href="#/planeacion" style={{ textDecoration: 'none' }}>← Volver</a>
@@ -205,7 +208,7 @@ export default function HojaAsesor() {
       <div className="asesor-main advisor-main">
         <section className="advisor-welcome">
           <h1>Hola, {asesor.nombre.split(' ')[0]}</h1>
-          <p>Tu agenda y servicios pedagógicos para hoy.</p>
+          <p>Tu agenda y servicios de {esIngles ? 'Inglés' : 'servicios pedagógicos'} para hoy.</p>
         </section>
 
         {misColegios.length === 0 ? (
@@ -328,6 +331,7 @@ export default function HojaAsesor() {
                     onToggle={() => toggleCard(c.id)}
                     onServ={(i, p) => setServ(c.id, i, p)}
                     onPatch={(p) => patchCol(c.id, p)}
+                    rama={rama} servFilter={filtraRama}
                     onReportar={() => abrirAlerta(c.id)} />
                 </div>
               ))}
