@@ -4,8 +4,8 @@ import { createClient } from '@supabase/supabase-js'
 // Identidad en Supabase Auth + RLS por rol (supabase_blindaje.sql): la
 // publishable key es pública por diseño, pero sin sesión válida las políticas
 // niegan todo acceso a los datos.
-export const URL = 'https://ktmeygeuhyprilkkbfkq.supabase.co'
-export const KEY = 'sb_publishable_eXw3RIZi0GB6WTgRd8s_Qg_Mqg7rZli'
+export const URL = 'https://mfqslaxwmacnzepqpqku.supabase.co'
+export const KEY = 'sb_publishable_Y2p0b5A4mF2oeP52-fVRCA_Dc2wAHuY'
 
 export const supabase = createClient(URL, KEY, {
   auth: {

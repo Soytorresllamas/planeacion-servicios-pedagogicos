@@ -201,6 +201,7 @@ export default function Administracion() {
   const [uRol, setURol] = useState<Rol>('asesor')
   const [uAsesor, setUAsesor] = useState('nueva')  // 'nueva' | id de asesor existente
   const [uEjecutivo, setUEjecutivo] = useState('') // rol ejecutivo: nombre como en «Ejecutivo Responsable»
+  const [uGerencia, setUGerencia] = useState('')
   const [creando, setCreando] = useState(false)
   const [tempCreada, setTempCreada] = useState<{ nombre: string; correo: string; pass: string } | null>(null)
 
@@ -217,6 +218,7 @@ export default function Administracion() {
       nombre: uNombre, apellido: uApellido, correo: uCorreo, fechaIngreso: uFecha, rol: uRol,
       asesorId: asesorExistente,
       ejecutivo: uRol === 'ejecutivo' ? uEjecutivo.trim() || undefined : undefined,
+      gerencia: uRol === 'gerente' ? uGerencia.trim() || undefined : undefined,
     })
     if (!r.ok) { toast(r.error, 'err'); setCreando(false); return }
     let creado = r.usuario
@@ -229,7 +231,7 @@ export default function Administracion() {
     }
     setUsuarios((us) => [...us, creado])
     setTempCreada({ nombre: `${creado.nombre} ${creado.apellido}`, correo: creado.correo, pass: r.tempPassword })
-    setUNombre(''); setUApellido(''); setUCorreo(''); setUAsesor('nueva'); setUEjecutivo(''); setCreando(false)
+    setUNombre(''); setUApellido(''); setUCorreo(''); setUAsesor('nueva'); setUEjecutivo(''); setUGerencia(''); setCreando(false)
     toast(`Usuario creado: ${creado.correo}`, 'ok')
   }
 
@@ -471,8 +473,15 @@ export default function Administracion() {
                   {catalogos.ejecutivos.map((ej) => <option key={ej} value={ej} />)}
                 </datalist></label>
             )}
+            {uRol === 'gerente' && (
+              <label style={{ flex: '0 1 210px', margin: 0 }}>Gerencia regional
+                <select value={uGerencia} onChange={(e) => setUGerencia(e.target.value)} style={{ width: '100%', fontSize: 13, padding: '6px 8px', marginTop: 3 }}>
+                  <option value="">Seleccionar gerencia</option>
+                  {catalogos.gerencias.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select></label>
+            )}
             <button className="gate-btn" type="submit" style={{ width: 'auto', padding: '9px 18px' }}
-              disabled={creando || !uNombre.trim() || !uApellido.trim() || !uCorreo.trim() || (uRol === 'ejecutivo' && !uEjecutivo.trim())}>{creando ? 'Creando…' : 'Crear con contraseña temporal'}</button>
+              disabled={creando || !uNombre.trim() || !uApellido.trim() || !uCorreo.trim() || (uRol === 'ejecutivo' && !uEjecutivo.trim()) || (uRol === 'gerente' && !uGerencia.trim())}>{creando ? 'Creando…' : 'Crear con contraseña temporal'}</button>
           </form>
           <div className="hint">La cuenta se crea en Supabase Auth con una contraseña temporal (se muestra una sola vez) y la persona debe cambiarla en su primer ingreso.</div>
         </div>
@@ -494,7 +503,7 @@ export default function Administracion() {
                     </select>
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>{fmtFecha(u.fechaIngreso)}</td>
-                  <td style={{ color: 'var(--mut)' }}>{u.rol === 'asesor' ? nombreAsesor(u.asesorId) : u.rol === 'ejecutivo' ? (u.ejecutivo ?? '⚠ sin nombre de BI') : '—'}</td>
+                  <td style={{ color: 'var(--mut)' }}>{u.rol === 'asesor' ? nombreAsesor(u.asesorId) : u.rol === 'ejecutivo' ? (u.ejecutivo ?? '⚠ sin nombre de BI') : u.rol === 'gerente' ? <select value={u.gerencia ?? ''} aria-label="Gerencia regional" onChange={(e) => void aplicarPatch(u, { gerencia: e.target.value || undefined })} style={{ fontSize: 11.5, width: 'auto', minWidth: 120 }}><option value="">⚠ sin gerencia</option>{catalogos.gerencias.map((g) => <option key={g} value={g}>{g}</option>)}</select> : '—'}</td>
                   <td>
                     <button className="sec" style={{ fontSize: 11 }} onClick={() => alternarActivo(u)}>
                       {u.activo ? 'Activo' : 'Inactivo'}

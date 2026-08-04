@@ -10,6 +10,7 @@ import {
   genTokenDirector, datosDirector, normalizarDirector, colegiosDeEjecutivo, normNombre,
   marcarNecesidadViaje, filasViajes, estadoReserva, resumenViajes,
   detectarCambios, importarColegios,
+  seguimientoColegio, resumenGerencia, resumenEjecutivos,
 } from './planeacion';
 import type { Servicio, Colegio } from './planeacion';
 
@@ -516,5 +517,21 @@ describe('colegiosDeEjecutivo', () => {
     expect(colegiosDeEjecutivo(cols, 'Maria Lopez').map((c) => c.id)).toEqual(['a', 'b']);
     expect(colegiosDeEjecutivo(cols, '')).toEqual([]);
     expect(normNombre('  JOSÉ  Pérez ')).toBe('jose perez');
+  });
+});
+
+describe('seguimiento de gerencia', () => {
+  const servicio = (estatus: Servicio['estatus'], fechaPlan?: string): Servicio => ({ tipo: 'uso', estatus, fechaPlan });
+  const col = (id: string, ejecutivo: string, gerencia: string, servicios: Servicio[], asesorId: string | null = 'ase-1'): Colegio => ({ id, nombre: id, campaign: 'SMART', tier: 'top', asesorId, ejecutivo, gerencia, servicios });
+
+  it('clasifica alerta antes que atraso y calcula la próxima fecha', () => {
+    const c = col('c1', 'Ejecutivo A', 'Norte', [servicio('pendiente', '2026-10-20')]);
+    expect(seguimientoColegio(c, [{ id: 'a', fecha: '2026-01-01', asesorId: 'ase-1', colegioId: 'c1', tipo: 'otros', descripcion: 'x' }], '2026-10-01')).toMatchObject({ prioridad: 'critico', proximaFecha: '2026-10-20' });
+  });
+
+  it('agrega por gerencia con denominador ponderado y separa ejecutivos', () => {
+    const cols = [col('c1', 'Ejecutivo A', 'Norte', [servicio('realizado')]), col('c2', 'Ejecutivo A', 'Norte', [servicio('pendiente')]), col('c3', 'Ejecutivo B', 'Norte', [servicio('agendado', '2026-10-20')]), col('c4', 'Otro', 'Sur', [servicio('realizado')])];
+    expect(resumenGerencia(cols, 'Norte', [], '2026-10-01')).toMatchObject({ colegios: 3, ejecutivos: 2, servicios: 3, realizados: 1, porcentaje: 33 });
+    expect(resumenEjecutivos(cols, 'Norte', [], '2026-10-01').map((x) => x.ejecutivo)).toEqual(['Ejecutivo A', 'Ejecutivo B']);
   });
 });

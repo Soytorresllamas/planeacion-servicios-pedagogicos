@@ -1,0 +1,1 @@
+import{j as t}from"./index-Dae-GKYQ.js";function i({tone:a="neutral",className:e,children:s,...n}){const o=["ui-badge",`ui-badge-${a}`,e].filter(Boolean).join(" ");return t.jsx("span",{className:o,...n,children:s})}export{i as B};

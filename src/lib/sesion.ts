@@ -8,6 +8,7 @@ export interface Sesion {
   nombre: string;      // para el saludo/encabezado
   asesorId?: string;   // rol asesor: su hoja
   ejecutivo?: string;  // rol ejecutivo: su nombre de «Ejecutivo Responsable» (casa sus colegios)
+  gerencia?: string;   // rol gerente: su gerencia regional
 }
 
 const KEY = 'psp-sesion-v3';
@@ -38,6 +39,7 @@ export const tabsPorRol = (rol: Rol): { to: string; label: string }[] => {
         { to: '/planeacion', label: 'Planeación' },
         { to: '/rentabilidad', label: 'Retorno' },
         { to: '/logistica', label: 'Logística' },
+        { to: '/gerencia', label: 'Gerencias' },
         { to: '/administracion', label: 'Administración' },
       ];
     case 'coordinador':
@@ -46,7 +48,10 @@ export const tabsPorRol = (rol: Rol): { to: string; label: string }[] => {
         { to: '/planeacion', label: 'Planeación' },
         { to: '/rentabilidad', label: 'Retorno' },
         { to: '/logistica', label: 'Logística' },
+        { to: '/gerencia', label: 'Gerencias' },
       ];
+    case 'gerente':
+      return [{ to: '/gerencia', label: 'Mi gerencia' }];
     case 'viajes':
       return [{ to: '/logistica', label: 'Logística' }];
     case 'simulador':
@@ -61,6 +66,7 @@ export const tabsPorRol = (rol: Rol): { to: string; label: string }[] => {
 export const rutaInicial = (rol: Rol): string =>
   rol === 'asesor' ? '/mi-hoja'
     : rol === 'ejecutivo' ? '/mis-colegios'
+    : rol === 'gerente' ? '/gerencia'
     : rol === 'viajes' ? '/logistica'
     : rol === 'simulador' ? '/simulador'
     : rol === 'logistica' ? '/rentabilidad' : '/planeacion';
@@ -72,8 +78,9 @@ export const rutaPermitida = (rol: Rol, path: string): boolean => {
   if (rol === 'admin') return true;
   if (rol === 'asesor') return path === '/mi-hoja';
   if (rol === 'ejecutivo') return path === '/mis-colegios';
+  if (rol === 'gerente') return path === '/gerencia';
   if (rol === 'viajes') return path === '/logistica';
   if (rol === 'simulador') return path === '/simulador';
   // coordinador y logística: sus pestañas + vistas previas de portales y director
-  return ['/planeacion', '/rentabilidad', '/logistica', '/mi-hoja', '/mis-colegios', '/vista-director'].includes(path);
+  return ['/planeacion', '/rentabilidad', '/logistica', '/gerencia', '/mi-hoja', '/mis-colegios', '/vista-director'].includes(path);
 };

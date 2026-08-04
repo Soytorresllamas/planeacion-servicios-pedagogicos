@@ -42,6 +42,7 @@ const Streamgraph = lazyConReintento(() => import('./pages/Streamgraph.tsx'), 's
 const Documentos = lazyConReintento(() => import('./pages/Documentos.tsx'), 'documentos')
 const HojaAsesor = lazyConReintento(() => import('./pages/HojaAsesor.tsx'), 'mi-hoja')
 const MisColegios = lazyConReintento(() => import('./pages/MisColegios.tsx'), 'mis-colegios')
+const Gerencia = lazyConReintento(() => import('./pages/Gerencia.tsx'), 'gerencia')
 const VistaDirectorPreview = lazyConReintento(() => import('./pages/VistaDirectorPreview.tsx'), 'vista-director')
 
 export default function App() {
@@ -58,6 +59,7 @@ export default function App() {
     '/rentabilidad': 'chart',
     '/logistica': 'truck',
     '/administracion': 'settings',
+    '/gerencia': 'users',
   }
   const nav = tabsPorRol(sesion.rol).map((item) => ({ ...item, icon: iconoPorRuta[item.to] ?? 'briefcase' }))
 
@@ -79,6 +81,7 @@ export default function App() {
             {/* portales del asesor y del ejecutivo; otros roles los ven como vista previa */}
             <Route path="/mi-hoja" element={g('/mi-hoja', <HojaAsesor />)} />
             <Route path="/mis-colegios" element={g('/mis-colegios', <MisColegios />)} />
+            <Route path="/gerencia" element={g('/gerencia', <Gerencia />)} />
             {/* vista previa interna de la pantalla del director (la pública vive fuera del login) */}
             <Route path="/vista-director/:id" element={g('/vista-director', <VistaDirectorPreview />)} />
             <Route path="*" element={<Navigate to={inicio} replace />} />

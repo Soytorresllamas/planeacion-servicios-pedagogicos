@@ -19,8 +19,9 @@ create table if not exists public.psp_usuarios (
   nombre         text not null default '',
   apellido       text not null default '',
   rol            text not null default 'asesor'
-                 check (rol in ('admin', 'coordinador', 'logistica', 'asesor')),
+                 check (rol in ('admin', 'coordinador', 'logistica', 'gerente', 'asesor')),
   asesor_id      text,                    -- rol asesor: liga con su hoja en psp_planeacion
+  gerencia       text,                    -- rol gerente: liga con su gerencia regional
   fecha_ingreso  date,
   temp_password  boolean not null default true,
   activo         boolean not null default true,
@@ -58,6 +59,7 @@ begin
     if new.rol is distinct from old.rol
        or new.activo is distinct from old.activo
        or new.asesor_id is distinct from old.asesor_id
+       or new.gerencia is distinct from old.gerencia
        or new.correo is distinct from old.correo then
       raise exception 'Campo protegido: solo un administrador puede modificarlo';
     end if;

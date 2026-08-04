@@ -443,6 +443,97 @@ export function colegiosDeEjecutivo(colegios: Colegio[], ejecutivo: string): Col
   return colegios.filter((c) => c.ejecutivo && normNombre(c.ejecutivo) === key);
 }
 
+export type PrioridadGerencia = 'critico' | 'atrasado' | 'en_agenda' | 'por_programar' | 'completo';
+
+export interface ColegioSeguimiento {
+  colegio: Colegio;
+  total: number;
+  realizados: number;
+  agendados: number;
+  pendientes: number;
+  vencidos: number;
+  alertasAbiertas: number;
+  proximaFecha?: string;
+  prioridad: PrioridadGerencia;
+}
+
+export interface EjecutivoSeguimiento {
+  ejecutivo: string;
+  colegios: number;
+  servicios: number;
+  realizados: number;
+  agendados: number;
+  pendientes: number;
+  vencidos: number;
+  alertasAbiertas: number;
+  porcentaje: number;
+  colegiosSinAsesor: number;
+  colegiosCompletos: number;
+}
+
+export interface GerenciaSeguimiento extends EjecutivoSeguimiento {
+  ejecutivos: number;
+  colegiosConAlerta: number;
+  colegiosSinProximaFecha: number;
+}
+
+export function seguimientoColegio(c: Colegio, alertas: Alerta[] = [], hoy: string = hoyISO()): ColegioSeguimiento {
+  const abiertas = alertas.filter((a) => a.colegioId === c.id && !a.atendida).length;
+  const realizados = c.servicios.filter((s) => s.estatus === 'realizado').length;
+  const agendados = c.servicios.filter((s) => s.estatus === 'agendado').length;
+  const pendientes = c.servicios.filter((s) => s.estatus === 'pendiente').length;
+  const vencidos = c.servicios.filter((s) => urgencia(s, hoy) === 'vencido').length;
+  const proximaFecha = c.servicios
+    .filter((s) => s.estatus !== 'realizado' && s.fechaPlan && s.fechaPlan >= hoy)
+    .map((s) => s.fechaPlan!)
+    .sort()[0];
+  const prioridad: PrioridadGerencia = abiertas > 0 ? 'critico'
+    : vencidos > 0 ? 'atrasado'
+    : c.servicios.length > 0 && realizados === c.servicios.length ? 'completo'
+    : proximaFecha || agendados > 0 ? 'en_agenda' : 'por_programar';
+  return { colegio: c, total: c.servicios.length, realizados, agendados, pendientes, vencidos, alertasAbiertas: abiertas, proximaFecha, prioridad };
+}
+
+export function resumenGerencia(colegios: Colegio[], gerencia?: string, alertas: Alerta[] = [], hoy: string = hoyISO()): GerenciaSeguimiento {
+  const filtrados = gerencia ? colegios.filter((c) => normNombre(c.gerencia ?? '') === normNombre(gerencia)) : colegios;
+  const rows = filtrados.map((c) => seguimientoColegio(c, alertas, hoy));
+  const ejecutivos = new Set(filtrados.map((c) => c.ejecutivo).filter(Boolean));
+  const servicios = rows.reduce((n, r) => n + r.total, 0);
+  const realizados = rows.reduce((n, r) => n + r.realizados, 0);
+  return {
+    ejecutivo: gerencia ?? 'Todas las gerencias', colegios: filtrados.length, servicios, realizados,
+    agendados: rows.reduce((n, r) => n + r.agendados, 0), pendientes: rows.reduce((n, r) => n + r.pendientes, 0),
+    vencidos: rows.reduce((n, r) => n + r.vencidos, 0), alertasAbiertas: rows.reduce((n, r) => n + r.alertasAbiertas, 0),
+    porcentaje: servicios ? Math.round((realizados / servicios) * 100) : 0,
+    colegiosSinAsesor: filtrados.filter((c) => !c.asesorId).length,
+    colegiosCompletos: rows.filter((r) => r.prioridad === 'completo').length,
+    ejecutivos: ejecutivos.size,
+    colegiosConAlerta: rows.filter((r) => r.alertasAbiertas > 0).length,
+    colegiosSinProximaFecha: rows.filter((r) => r.prioridad === 'por_programar').length,
+  };
+}
+
+export function resumenEjecutivos(colegios: Colegio[], gerencia?: string, alertas: Alerta[] = [], hoy: string = hoyISO()): EjecutivoSeguimiento[] {
+  const filtrados = gerencia ? colegios.filter((c) => normNombre(c.gerencia ?? '') === normNombre(gerencia)) : colegios;
+  const porEjecutivo = new Map<string, Colegio[]>();
+  for (const c of filtrados) {
+    const key = c.ejecutivo?.trim() || '(sin ejecutivo)';
+    porEjecutivo.set(key, [...(porEjecutivo.get(key) ?? []), c]);
+  }
+  return [...porEjecutivo.entries()].map(([ejecutivo, cols]) => {
+    const rows = cols.map((c) => seguimientoColegio(c, alertas, hoy));
+    const servicios = rows.reduce((n, r) => n + r.total, 0);
+    return {
+      ejecutivo, colegios: cols.length, servicios, realizados: rows.reduce((n, r) => n + r.realizados, 0),
+      agendados: rows.reduce((n, r) => n + r.agendados, 0), pendientes: rows.reduce((n, r) => n + r.pendientes, 0),
+      vencidos: rows.reduce((n, r) => n + r.vencidos, 0), alertasAbiertas: rows.reduce((n, r) => n + r.alertasAbiertas, 0),
+      porcentaje: servicios ? Math.round((rows.reduce((n, r) => n + r.realizados, 0) / servicios) * 100) : 0,
+      colegiosSinAsesor: cols.filter((c) => !c.asesorId).length,
+      colegiosCompletos: rows.filter((r) => r.prioridad === 'completo').length,
+    };
+  }).sort((a, b) => b.alertasAbiertas - a.alertasAbiertas || b.vencidos - a.vencidos || a.ejecutivo.localeCompare(b.ejecutivo));
+}
+
 export interface Carga { colegios: number; servicios: number; realizados: number; usoProf: number; }
 export function cargaAsesor(colegios: Colegio[], asesorId: string): Carga {
   let cols = 0, servicios = 0, realizados = 0, usoProf = 0;
