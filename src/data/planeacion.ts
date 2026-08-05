@@ -78,6 +78,8 @@ export interface Colegio {
   asesorId: string | null;   // null = sin asignar (lo cubren externos)
   asesorInglesId?: string | null;
   servicios: Servicio[];     // congelados al generar
+  /** Respaldo de servicios reemplazados durante una corrección de catálogo. */
+  serviciosHistorico?: { fecha: string; motivo: string; servicios: Servicio[] }[];
   // metadatos del colegio (opcionales, editables en la hoja del asesor)
   serie?: string;            // p.ej. Acierta, Revuela Up
   ingles?: string;           // p.ej. Bright Sparks, Winglish
@@ -171,13 +173,16 @@ const INGLES_MODIFICADOR_NIVEL: Record<NivelKey, Partial<Record<ServTipo, number
 /** Genera servicios de Inglés para una combinación concreta de campaña/tier/niveles. */
 export function serviciosDeIngles(campaign: Campaign, tier: TierKey, niveles: NivelKey[] = []): Servicio[] {
   const base = INGLES_MATRIZ_PROVISIONAL[campaign][tier];
-  const nivelesActivos = niveles.length ? niveles : (['pre', 'pri', 'sec', 'bach'] as NivelKey[]);
+  // Sin niveles explícitos no debemos inventar cuatro ciclos completos. Se
+  // genera una sola terna sin nivel y queda lista para que coordinación la
+  // precise cuando el catálogo escolar esté completo.
+  const nivelesActivos: (NivelKey | undefined)[] = niveles.length ? niveles : [undefined];
   const out: Servicio[] = [];
   for (const nivel of nivelesActivos) {
-    const mod = INGLES_MODIFICADOR_NIVEL[nivel];
+    const mod = nivel ? INGLES_MODIFICADOR_NIVEL[nivel] : {};
     (Object.keys(base) as ServTipo[]).forEach((tipo) => {
       const count = Math.max(0, base[tipo] + (mod[tipo] ?? 0));
-      for (let i = 0; i < count; i++) out.push({ tipo, rama: 'ingles', nivel, estatus: 'pendiente' });
+      for (let i = 0; i < count; i++) out.push({ tipo, rama: 'ingles', ...(nivel ? { nivel } : {}), estatus: 'pendiente' });
     });
   }
   return out;
