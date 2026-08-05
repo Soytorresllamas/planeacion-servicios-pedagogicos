@@ -90,9 +90,21 @@ export async function crearUsuario(n: NuevoUsuario, rand?: () => number): Promis
     rol: n.rol, asesorId: n.asesorId, ramaAsesor: n.ramaAsesor, ejecutivo: n.ejecutivo, gerencia: n.gerencia, fechaIngreso: n.fechaIngreso,
     tempPassword: true, activo: true, creado: new Date().toISOString(), ingresos: 0,
   };
-  const { error: errFila } = await supabase.from(USUARIOS_TABLE).insert(aFila(usuario));
+  const fila = aFila(usuario);
+  let { error: errFila } = await supabase.from(USUARIOS_TABLE).insert(fila);
+  // Compatibilidad temporal: V3.6 agrega rama_asesor. Un administrador puede
+  // seguir dando de alta usuarios pedagógicos mientras termina la migración;
+  // nunca omitimos el campo para un asesor Inglés porque lo dejaría mal ligado.
+  if (errFila && /rama_asesor|column .*does not exist/i.test(errFila.message) && (n.ramaAsesor ?? 'pedagogica') === 'pedagogica') {
+    const filaLegacy = { ...fila } as Partial<typeof fila> & Record<string, unknown>;
+    delete filaLegacy.rama_asesor;
+    ({ error: errFila } = await supabase.from(USUARIOS_TABLE).insert(filaLegacy));
+  }
   if (errFila) {
-    return { ok: false, error: `La cuenta se creó pero el perfil no (${errFila.message}). Reintenta o borra el usuario en Supabase → Authentication.` };
+    const faltaMigracion = /rama_asesor|column .*does not exist/i.test(errFila.message);
+    return { ok: false, error: faltaMigracion
+      ? 'El esquema de usuarios aún no tiene la rama Inglés. Ejecuta supabase_actualizacion_v3_6.sql en Supabase y vuelve a intentar.'
+      : `La cuenta se creó pero el perfil no (${errFila.message}). Reintenta o borra el usuario en Supabase → Authentication.` };
   }
   return { ok: true, usuario, tempPassword };
 }
