@@ -99,7 +99,7 @@ export interface Colegio {
   otraSerie?: string;
 }
 
-export interface Asesor { id: string; nombre: string; rama?: RamaAsesor; }
+export interface Asesor { id: string; nombre: string; rama?: RamaAsesor; activo?: boolean; }
 
 // Alertas de caso crítico: el asesor las levanta desde su portal; el coordinador las ve en Planeación.
 export type ProblemaKey = 'materiales' | 'atencion' | 'facturacion' | 'otros';

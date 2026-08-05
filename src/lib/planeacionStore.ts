@@ -91,13 +91,13 @@ export async function loadRemote(): Promise<LoadRemoteResult> {
   try {
     const [cols, ases, ales] = await Promise.all([
       todas<{ data: Colegio }>(T_COLEGIOS, 'data', 'orden'),
-      todas<{ id: string; nombre: string; rama: 'pedagogica' | 'ingles' }>(T_ASESORES, 'id,nombre,rama', 'orden'),
+      todas<{ id: string; nombre: string; rama: 'pedagogica' | 'ingles'; activo: boolean }>(T_ASESORES, 'id,nombre,rama,activo', 'orden'),
       todas<{ data: Alerta }>(T_ALERTAS, 'data', 'updated_at'),
     ]);
     if (cols.length) {
       const data: PlaneacionData = {
         colegios: cols.map((r) => asegurarServiciosDeIngles(r.data)),
-        asesores: ases.map((r) => ({ id: r.id, nombre: r.nombre, rama: r.rama ?? 'pedagogica' })),
+        asesores: ases.filter((r) => r.activo !== false).map((r) => ({ id: r.id, nombre: r.nombre, rama: r.rama ?? 'pedagogica', activo: r.activo })),
         alertas: ales.map((r) => r.data),
       };
       if (valid(data)) {
@@ -136,7 +136,7 @@ export async function guardarColegios(colegios: Colegio[]): Promise<R> {
 export async function guardarAsesores(items: { asesor: Asesor; orden: number }[]): Promise<R> {
   if (!items.length) return { ok: true };
   try {
-    const filas = items.map(({ asesor, orden }) => ({ id: asesor.id, nombre: asesor.nombre, rama: asesor.rama ?? 'pedagogica', orden, updated_at: ahora() }));
+    const filas = items.map(({ asesor, orden }) => ({ id: asesor.id, nombre: asesor.nombre, rama: asesor.rama ?? 'pedagogica', activo: asesor.activo !== false, orden, updated_at: ahora() }));
     const { error } = await supabase.from(T_ASESORES).upsert(filas, { onConflict: 'id' });
     return { ok: !error, error };
   } catch (e) { return { ok: false, error: e }; }

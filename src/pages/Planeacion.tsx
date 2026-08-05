@@ -335,7 +335,13 @@ export default function Planeacion() {
                   ) : (
                     <button onClick={() => setTargetSel(a.id)} title="Seleccionar asesor"
                       style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-                      <span style={{ fontWeight: on ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.nombre}{sobre && <span title={`Sobrecarga: ${c.usoProf} uso/prof > ${Math.round(perAseCap)} de capacidad anual`} style={{ marginLeft: 4 }}>⚠</span>}</span>
+                      <span style={{ fontWeight: on ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {a.nombre}
+                        <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: (a.rama ?? 'pedagogica') === 'ingles' ? '#6D4C9B' : 'var(--smart)' }}>
+                          {(a.rama ?? 'pedagogica') === 'ingles' ? 'INGLÉS' : 'PEDAGÓGICO'}
+                        </span>
+                        {sobre && <span title={`Sobrecarga: ${c.usoProf} uso/prof > ${Math.round(perAseCap)} de capacidad anual`} style={{ marginLeft: 4 }}>⚠</span>}
+                      </span>
                       <span style={{ color: 'var(--mut)', fontSize: 12, whiteSpace: 'nowrap', flex: '0 0 auto' }}>{c.colegios} col · {c.servicios} serv</span>
                     </button>
                   )}
