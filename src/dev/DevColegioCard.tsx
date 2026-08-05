@@ -3,7 +3,7 @@
 // import.meta.env.DEV en main.tsx). Útil para iterar diseño móvil de la tarjeta.
 import { useState } from 'react'
 import { ColegioCard } from '../features/planeacion/ColegioCard'
-import { hoyISO, serviciosDeIngles } from '../data/planeacion'
+import { hoyISO } from '../data/planeacion'
 import type { Colegio, RamaAsesor } from '../data/planeacion'
 
 const mock: Colegio = {
@@ -18,7 +18,10 @@ const mock: Colegio = {
     { tipo: 'prof', estatus: 'pendiente' },
     { tipo: 'prof', estatus: 'pendiente', extra: true },
     { tipo: 'didac', estatus: 'pendiente' },
-    ...serviciosDeIngles('SMART', 'top', ['pre']),
+    // Demo deliberadamente compacta: un servicio de cada rubro de Inglés.
+    { tipo: 'uso', rama: 'ingles', estatus: 'pendiente', nivel: 'pre', fechaPlan: '2026-08-04' },
+    { tipo: 'prof', rama: 'ingles', estatus: 'pendiente', nivel: 'pre' },
+    { tipo: 'didac', rama: 'ingles', estatus: 'pendiente', nivel: 'pre' },
   ],
 }
 
