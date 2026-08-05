@@ -1,0 +1,1 @@
+import{j as s}from"./index-_AHZADjZ.js";function e({children:i,trailing:r}){return s.jsxs("div",{className:"ui-filter-bar",children:[s.jsx("div",{className:"ui-filter-controls",children:i}),r&&s.jsx("div",{className:"ui-filter-trailing",children:r})]})}function a({children:i}){return s.jsx("span",{className:"ui-filter-count",children:i})}export{e as F,a};

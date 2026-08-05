@@ -16,6 +16,7 @@ if (!rootEl) throw new Error('No se encontró el elemento #root')
 const esEnlaceDirector = /^#\/director\//.test(window.location.hash)
 const esDemoDirector = window.location.hash === '#/demo/director'
 const esDemoHub = window.location.hash === '#/demo'
+const esDemoFridaK = window.location.hash === '#/demo/frida-k'
 // Solo en desarrollo (#/dev-card): arnés visual de ColegioCard sin login.
 // El ternario sobre import.meta.env.DEV hace que producción ni siquiera emita
 // el chunk (la rama muerta se elimina en el build).
@@ -38,6 +39,8 @@ const devRoute = import.meta.env.DEV ? devRoutes[window.location.hash] : undefin
 const demoRoute = demoRoutes[window.location.hash]
 // eslint-disable-next-line react-refresh/only-export-components -- main.tsx es el entry; no aplica fast refresh
 const DevCard = import.meta.env.DEV ? lazy(() => import('./dev/DevColegioCard.tsx')) : () => null
+// eslint-disable-next-line react-refresh/only-export-components -- entrypoint: demo pública cargada de forma diferida
+const DemoFridaK = lazy(() => import('./dev/DevColegioCard.tsx'))
 // eslint-disable-next-line react-refresh/only-export-components -- arnés DEV, rama eliminada en build
 const DevLayout = lazy(() => import('./dev/DevLayoutPreview.tsx'))
 // eslint-disable-next-line react-refresh/only-export-components -- entrypoint: carga diferida del hub público
@@ -50,6 +53,8 @@ ReactDOM.createRoot(rootEl).render(
         <DirectorPublico />
       ) : esDemoHub ? (
         <Suspense fallback={null}><DemoHub /></Suspense>
+      ) : esDemoFridaK ? (
+        <Suspense fallback={null}><DemoFridaK /></Suspense>
       ) : demoRoute ? (
         <Suspense fallback={null}><DevLayout initialPath={demoRoute} /></Suspense>
       ) : devRoute ? (
