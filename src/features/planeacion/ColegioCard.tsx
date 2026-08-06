@@ -45,10 +45,13 @@ interface Props {
   onAgregar?: (tipo: ServTipo) => void
   /** Coordinación: quita un taller extra (solo servicios `extra`). */
   onQuitarExtra?: (idx: number) => void
+  /** Mensajería: botón contextual junto al nombre del colegio. */
+  conversacionOpen?: boolean
+  onConversacionToggle?: () => void
 }
 
 /** Tarjeta de colegio compartida: una sub-tarea por línea, barra segmentada, footer y notas. */
-export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editable, onReportar, servFilter, rama = 'pedagogica', onAgregar, onQuitarExtra }: Props) {
+export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editable, onReportar, servFilter, rama = 'pedagogica', onAgregar, onQuitarExtra, conversacionOpen = false, onConversacionToggle }: Props) {
   const [notaKey, setNotaKey] = useState<number | null>(null)
   const [notasOpen, setNotasOpen] = useState(false)
   const [contactoOpen, setContactoOpen] = useState(false)
@@ -112,6 +115,7 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
           </button>
           <input value={c.nombre} onChange={(e) => onPatch({ nombre: e.target.value })} title="Clic para renombrar"
             style={{ flex: 1, minWidth: 0, border: 'none', borderBottom: '1px dashed var(--line-2)', fontWeight: 600, fontSize: 'var(--fs-input)', background: 'transparent', padding: '0 0 1px' }} />
+          {onConversacionToggle && <button type="button" className="conversation-trigger" onClick={onConversacionToggle} aria-expanded={conversacionOpen}>{conversacionOpen ? 'Cerrar conversación' : 'Iniciar conversación'}</button>}
           {meta}
         </div>
       ) : (
@@ -119,6 +123,7 @@ export function ColegioCard({ c, hoy, abierto, onToggle, onServ, onPatch, editab
           style={{ display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer', width: '100%', minHeight: 32, textAlign: 'left', background: 'transparent', border: 'none', padding: 0, font: 'inherit', color: 'inherit' }}>
           {chevron}{dot}
           <b style={{ flex: 1, minWidth: 0, fontSize: 'var(--fs-title)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nombre}</b>
+          {onConversacionToggle && <span role="button" tabIndex={0} className="conversation-trigger" onClick={(e) => { e.stopPropagation(); onConversacionToggle() }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onConversacionToggle() } }} aria-expanded={conversacionOpen}>{conversacionOpen ? 'Cerrar conversación' : 'Iniciar conversación'}</span>}
           {meta}
         </button>
       )}

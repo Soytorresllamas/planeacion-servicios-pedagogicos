@@ -42,6 +42,7 @@ export default function MisColegios() {
   const [previewNombre, setPreviewNombre] = useState<string | null>(null)
   const [busca, setBusca] = useState('')
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
+  const [conversaciones, setConversaciones] = useState<Set<string>>(new Set())
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [vistas, setVistas] = useState<Record<string, string>>({})
 
@@ -133,6 +134,12 @@ export default function MisColegios() {
     if (abrir) marcarVisto(id)
     if (abrir) n.add(id); else n.delete(id)
     return n
+  })
+  const toggleConversacion = (colegioId: string) => setConversaciones((prev) => {
+    const next = new Set(prev)
+    if (next.has(colegioId)) next.delete(colegioId)
+    else { next.add(colegioId); marcarVisto(colegioId); setAbiertos((abiertas) => new Set(abiertas).add(colegioId)) }
+    return next
   })
   const enviarMensaje = async (colegio: Colegio, texto: string, rama: RamaServicio) => {
     const r = await crearMensaje({ colegioId: colegio.id, autorNombre: sesion.nombre, autorRol: 'ejecutivo', rama, texto })
@@ -246,17 +253,20 @@ export default function MisColegios() {
               const niveles = nivelesDeColegio(c)
               return (
                 <div id={`ej-${c.id}`} key={c.id} className="card-in panel executive-school-card" style={{ ['--i' as string]: Math.min(idxV, 8), margin: 0 }}>
-                  <button type="button" onClick={() => toggle(c.id)} aria-expanded={abierto}
-                    style={{ display: 'flex', gap: 7, alignItems: 'center', cursor: 'pointer', width: '100%', minHeight: 32, textAlign: 'left', background: 'transparent', border: 'none', padding: 0, font: 'inherit', color: 'inherit' }}>
-                    <span aria-hidden className={`card-chev${abierto ? ' abierto' : ''}`}>
-                      <svg viewBox="0 0 16 16" fill="none"><path d="M6 3.5 11 8l-5 4.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    </span>
-                    <span aria-hidden style={{ width: 9, height: 9, borderRadius: 9, flex: '0 0 auto', background: c.campaign === 'SMART' ? SMART : CORE }} />
-                    <b style={{ flex: 1, minWidth: 0, fontSize: 'var(--fs-title)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nombre}</b>
-                    {sat && <span title={`Satisfacción: ${sat.label}`} style={{ fontSize: 15, flex: '0 0 auto' }}>{sat.emoji}</span>}
-                    {mensajesNoLeidos(mensajesDe(c.id), vistas[c.id]) > 0 && <span title="Mensajes no leídos" style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: 'var(--smart)', background: '#EAF1F9', borderRadius: 8, padding: '1px 7px', flex: '0 0 auto' }}>💬 {mensajesNoLeidos(mensajesDe(c.id), vistas[c.id])}</span>}
-                    {vencidos > 0 && <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 7px', flex: '0 0 auto' }}>{vencidos} vencido{vencidos > 1 ? 's' : ''}</span>}
-                  </button>
+                  <div style={{ display: 'flex', gap: 7, alignItems: 'center', width: '100%', minHeight: 32 }}>
+                    <button type="button" onClick={() => toggle(c.id)} aria-expanded={abierto}
+                      style={{ display: 'flex', gap: 7, alignItems: 'center', cursor: 'pointer', flex: 1, minWidth: 0, minHeight: 32, textAlign: 'left', background: 'transparent', border: 'none', padding: 0, font: 'inherit', color: 'inherit' }}>
+                      <span aria-hidden className={`card-chev${abierto ? ' abierto' : ''}`}>
+                        <svg viewBox="0 0 16 16" fill="none"><path d="M6 3.5 11 8l-5 4.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      </span>
+                      <span aria-hidden style={{ width: 9, height: 9, borderRadius: 9, flex: '0 0 auto', background: c.campaign === 'SMART' ? SMART : CORE }} />
+                      <b style={{ flex: 1, minWidth: 0, fontSize: 'var(--fs-title)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nombre}</b>
+                      {sat && <span title={`Satisfacción: ${sat.label}`} style={{ fontSize: 15, flex: '0 0 auto' }}>{sat.emoji}</span>}
+                      {mensajesNoLeidos(mensajesDe(c.id), vistas[c.id]) > 0 && <span title="Mensajes no leídos" style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: 'var(--smart)', background: '#EAF1F9', borderRadius: 8, padding: '1px 7px', flex: '0 0 auto' }}>💬 {mensajesNoLeidos(mensajesDe(c.id), vistas[c.id])}</span>}
+                      {vencidos > 0 && <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 7px', flex: '0 0 auto' }}>{vencidos} vencido{vencidos > 1 ? 's' : ''}</span>}
+                    </button>
+                    <button type="button" className="conversation-trigger" onClick={() => toggleConversacion(c.id)} aria-expanded={conversaciones.has(c.id)}>{conversaciones.has(c.id) ? 'Cerrar conversación' : 'Iniciar conversación'}</button>
+                  </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '7px 0 2px' }}>
                     <div style={{ display: 'flex', gap: 2, flex: 1, minWidth: 60 }}>
@@ -305,12 +315,13 @@ export default function MisColegios() {
                       ))}
                     </div>
 
-                    <MensajeThread
+                    {conversaciones.has(c.id) && <MensajeThread
                       mensajes={mensajesDe(c.id)}
+                      viewerRole="ejecutivo"
                       ramasDisponibles={c.asesorInglesId ? ['pedagogica', 'ingles'] : ['pedagogica']}
                       canSend={sesion.rol === 'ejecutivo'}
                       onSend={(texto, rama) => enviarMensaje(c, texto, rama)}
-                    />
+                    />}
 
                     {/* detalle de sesiones (lectura) */}
                     <div style={{ marginTop: 10 }}>

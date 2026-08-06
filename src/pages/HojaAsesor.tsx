@@ -53,6 +53,7 @@ export default function HojaAsesor() {
   const [alSent, setAlSent] = useState(false)
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [vistas, setVistas] = useState<Record<string, string>>({})
+  const [conversaciones, setConversaciones] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let alive = true
@@ -177,6 +178,12 @@ export default function HojaAsesor() {
     return n
   })
   const mensajesDe = (colegioId: string) => mensajes.filter((m) => m.colegioId === colegioId)
+  const toggleConversacion = (colegioId: string) => setConversaciones((prev) => {
+    const next = new Set(prev)
+    if (next.has(colegioId)) next.delete(colegioId)
+    else { next.add(colegioId); marcarVisto(colegioId); setExpandidos((abiertos) => { const n = new Set(abiertos ?? []); n.add(colegioId); return n }) }
+    return next
+  })
   const marcarVisto = (colegioId: string) => {
     const visto = new Date().toISOString()
     setVistas((v) => ({ ...v, [colegioId]: visto }))
@@ -363,8 +370,9 @@ export default function HojaAsesor() {
                     onServ={(i, p) => setServ(c.id, i, p)}
                     onPatch={(p) => patchCol(c.id, p)}
                     rama={rama} servFilter={filtraRama}
-                    onReportar={() => abrirAlerta(c.id)} />
-                  {abiertoCard(c.id, idxV) && <MensajeThread mensajes={mensajesDe(c.id)} rama={rama} canSend={sesion.rol === 'asesor'} onSend={(texto) => enviarMensaje(c, texto)} />}
+                    onReportar={() => abrirAlerta(c.id)}
+                    conversacionOpen={conversaciones.has(c.id)} onConversacionToggle={() => toggleConversacion(c.id)} />
+                  {conversaciones.has(c.id) && <MensajeThread mensajes={mensajesDe(c.id)} rama={rama} viewerRole="asesor" canSend={sesion.rol === 'asesor'} onSend={(texto) => enviarMensaje(c, texto)} />}
                 </div>
               ))}
             </div>

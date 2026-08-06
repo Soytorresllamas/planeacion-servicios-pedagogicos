@@ -32,6 +32,7 @@ export default function DevColegioCard() {
   const [abierto, setAbierto] = useState(true)
   const [rama, setRama] = useState<RamaAsesor>('pedagogica')
   const [modo, setModo] = useState<'ejecutivo' | 'asesor'>('ejecutivo')
+  const [conversacionOpen, setConversacionOpen] = useState(false)
   const [mensajes, setMensajes] = useState<Mensaje[]>([
     { id: 'demo-msg-1', colegioId: 'x', autorId: 'demo-ej', autorNombre: 'Marcelo Torres', autorRol: 'ejecutivo', rama: 'pedagogica', servicioTipo: 'uso', servicioNivel: 'pre', texto: '¿Podemos confirmar la sesión de Uso para la próxima semana?', createdAt: '2026-08-05T16:42:00.000Z' },
     { id: 'demo-msg-2', colegioId: 'x', autorId: 'demo-ase', autorNombre: 'Laura Sánchez', autorRol: 'asesor', rama: 'pedagogica', texto: 'Sí, el colegio propuso el martes a las 10:00.', createdAt: '2026-08-05T17:05:00.000Z' },
@@ -58,8 +59,9 @@ export default function DevColegioCard() {
         onToggle={() => setAbierto((v) => !v)}
         onServ={(i, p) => setC((d) => ({ ...d, servicios: d.servicios.map((s, j) => j === i ? { ...s, ...p } : s) }))}
         onPatch={(p) => setC((d) => ({ ...d, ...p }))}
-        onReportar={() => {}} rama={rama} servFilter={filtraRama} />
-      <section className="panel" style={{ margin: 0, padding: 14 }}>
+        onReportar={() => {}} rama={rama} servFilter={filtraRama}
+        conversacionOpen={conversacionOpen} onConversacionToggle={() => setConversacionOpen((v) => !v)} />
+      {conversacionOpen && <section className="panel" style={{ margin: 0, padding: 14 }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
           <b style={{ marginRight: 'auto' }}>Demo de conversación</b>
           <span style={{ color: 'var(--mut)', fontSize: 12 }}>Cambia de rol para probar ambos flujos</span>
@@ -67,9 +69,9 @@ export default function DevColegioCard() {
           <button className={modo === 'asesor' ? 'primary' : 'sec'} onClick={() => setModo('asesor')}>Asesor</button>
         </div>
         <MensajeThread mensajes={mensajes} rama={modo === 'asesor' ? rama : undefined}
-          ramasDisponibles={modo === 'asesor' ? [rama] : ['pedagogica', 'ingles']}
+          ramasDisponibles={modo === 'asesor' ? [rama] : ['pedagogica', 'ingles']} viewerRole={modo === 'asesor' ? 'asesor' : 'ejecutivo'}
           canSend onSend={enviarDemo} />
-      </section>
+      </section>}
       {/* segunda tarjeta siempre colapsada, para comparar ambos estados */}
       <ColegioCard c={{ ...mock, id: 'y', nombre: 'Instituto México', campaign: 'CORE' }} hoy={hoyISO()} abierto={false}
         onToggle={() => {}} onServ={() => {}} onPatch={() => {}} />

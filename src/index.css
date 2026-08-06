@@ -105,6 +105,8 @@ button:hover .card-chev{background:var(--line);border-color:var(--mut);}
 .colegio-progress{display:flex;align-items:center;gap:8px;margin:7px 0 4px;padding:3px 0;}
 .colegio-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:9px;padding:9px 10px;background:var(--panel-bg);border:1px solid var(--line);border-radius:10px;}
 .colegio-tools label,.colegio-tools span{min-width:0;}
+.conversation-trigger{display:inline-flex;align-items:center;flex:0 0 auto;border:1px solid #B9D8CD;border-radius:999px;background:#F0FAF6;color:#087D68;padding:4px 9px;font:600 var(--fs-caption)/1.1 Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap;transition:background .15s ease,border-color .15s ease,color .15s ease;}
+.conversation-trigger:hover,.conversation-trigger[aria-expanded="true"]{background:#D9F3E9;border-color:#78B9A7;color:#066751;}
 @media(max-width:560px){
   .serv-row{grid-template-columns:20px 1fr auto;row-gap:6px;}
   .serv-row .c-chk{grid-column:1;grid-row:1;transform:scale(1.6);}
@@ -121,7 +123,43 @@ button:hover .card-chev{background:var(--line);border-color:var(--mut);}
   .serv-row .c-nota svg{width:21px;height:21px;}
   .c-nota-text,.c-nota-edit{padding-left:12px;font-size:var(--fs-title);}
   .colegio-tools{align-items:flex-start;}
+  .conversation-trigger{font-size:var(--fs-caption);padding:6px 9px;}
 }
+
+/* Conversación con lenguaje visual inspirado en WhatsApp: jerarquía por burbuja,
+   composer compacto y estados de lectura sin romper el contexto operativo. */
+.wa-thread{margin-top:12px;border:1px solid #D7E5DF;border-radius:12px;overflow:hidden;background:#E9F2EE;box-shadow:0 2px 8px rgba(31,63,53,.06);}
+.wa-thread-head{display:flex;align-items:center;gap:9px;padding:9px 11px;background:#0B806A;color:#fff;}
+.wa-thread-avatar{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#D4F5E9;font-size:16px;}
+.wa-thread-title{display:grid;gap:1px;min-width:0;flex:1;}
+.wa-thread-title b{font-size:var(--fs-body);font-weight:700;}
+.wa-thread-title span{font-size:var(--fs-caption);opacity:.8;}
+.wa-thread-status{font-size:var(--fs-caption);color:#C6F4D9;white-space:nowrap;}
+.wa-messages{display:grid;gap:6px;max-height:280px;overflow-y:auto;padding:12px 10px;background-color:#E9F2EE;background-image:radial-gradient(rgba(51,92,78,.09) .7px,transparent .7px);background-size:12px 12px;}
+.wa-message{display:flex;max-width:86%;}
+.wa-message.wa-outgoing{justify-self:end;}
+.wa-message.wa-incoming{justify-self:start;}
+.wa-bubble{position:relative;padding:7px 9px 5px;border-radius:8px;background:#fff;box-shadow:0 1px 1px rgba(34,54,48,.1);min-width:150px;}
+.wa-outgoing .wa-bubble{background:#D9FDD3;border-top-right-radius:2px;}
+.wa-incoming .wa-bubble{border-top-left-radius:2px;}
+.wa-author{display:flex;align-items:baseline;gap:5px;margin-bottom:3px;font-size:var(--fs-caption);color:#5F6D67;}
+.wa-author b{color:#087D68;font-size:var(--fs-caption);}
+.wa-outgoing .wa-author b{color:#426B3C;}
+.wa-text{font-size:var(--fs-body);line-height:1.4;color:#202C28;white-space:pre-wrap;overflow-wrap:anywhere;padding-right:2px;}
+.wa-meta{display:flex;justify-content:flex-end;gap:4px;margin-top:3px;font-size:var(--fs-badge);color:#718079;line-height:1;}
+.wa-checks{color:#53A7D5;letter-spacing:-2px;}
+.wa-context{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:5px;padding-top:5px;border-top:1px solid rgba(74,115,102,.16);font-size:var(--fs-badge);color:#6A7771;}
+.wa-branch{border-radius:5px;padding:2px 5px;background:#E4F2FB;color:#26719C;font-weight:700;}
+.wa-branch-english{background:#F1EAF4;color:#76507D;}
+.wa-composer{display:flex;align-items:center;gap:6px;padding:8px;background:#F0F4F2;border-top:1px solid #D7E5DF;}
+.wa-input{flex:1;min-width:0;resize:none;border:1px solid #D1DDD8;border-radius:18px;background:#fff;padding:8px 12px;font:inherit;font-size:var(--fs-body);line-height:1.25;min-height:34px;max-height:80px;}
+.wa-input:focus{outline:none;border-color:#73B6A4;box-shadow:0 0 0 2px rgba(11,128,106,.12);}
+.wa-branch-select{width:auto;max-width:110px;border-radius:16px;padding:7px 8px;font-size:var(--fs-caption);background:#fff;border-color:#D1DDD8;}
+.wa-send{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;flex:0 0 34px;border:0;border-radius:50%;background:#0B806A;color:#fff;font-size:17px;line-height:1;cursor:pointer;transform:rotate(-7deg);transition:background .15s ease,transform .15s ease;}
+.wa-send:hover:not(:disabled){background:#076A59;transform:rotate(-7deg) scale(1.05);}
+.wa-send:disabled{opacity:.45;cursor:default;}
+.wa-empty,.wa-readonly{padding:16px 12px;color:#68766F;font-size:var(--fs-caption);text-align:center;background:#E9F2EE;}
+@media(max-width:560px){.wa-message{max-width:92%;}.wa-messages{max-height:340px;padding:10px 7px;}.wa-composer{padding:7px;}.wa-branch-select{max-width:92px;}.wa-input{font-size:16px;}.wa-thread-status{display:none;}}
 
 .asesor-page,.asesor-main,.asesor-card-grid,.card-in{min-width:0;}
 .asesor-attention-row b{min-width:0;overflow:hidden;text-overflow:ellipsis;}
