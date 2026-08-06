@@ -3,8 +3,10 @@
 // import.meta.env.DEV en main.tsx). Útil para iterar diseño móvil de la tarjeta.
 import { useState } from 'react'
 import { ColegioCard } from '../features/planeacion/ColegioCard'
+import { MensajeThread } from '../features/mensajes/MensajeThread'
 import { hoyISO } from '../data/planeacion'
 import type { Colegio, RamaAsesor } from '../data/planeacion'
+import type { Mensaje } from '../data/mensajes'
 
 const mock: Colegio = {
   id: 'x', nombre: 'Frida K', campaign: 'SMART', tier: 'top', asesorId: 'ase-1', asesorInglesId: 'ase-eng-1',
@@ -29,7 +31,21 @@ export default function DevColegioCard() {
   const [c, setC] = useState(mock)
   const [abierto, setAbierto] = useState(true)
   const [rama, setRama] = useState<RamaAsesor>('pedagogica')
+  const [modo, setModo] = useState<'ejecutivo' | 'asesor'>('ejecutivo')
+  const [mensajes, setMensajes] = useState<Mensaje[]>([
+    { id: 'demo-msg-1', colegioId: 'x', autorId: 'demo-ej', autorNombre: 'Marcelo Torres', autorRol: 'ejecutivo', rama: 'pedagogica', servicioTipo: 'uso', servicioNivel: 'pre', texto: '¿Podemos confirmar la sesión de Uso para la próxima semana?', createdAt: '2026-08-05T16:42:00.000Z' },
+    { id: 'demo-msg-2', colegioId: 'x', autorId: 'demo-ase', autorNombre: 'Laura Sánchez', autorRol: 'asesor', rama: 'pedagogica', texto: 'Sí, el colegio propuso el martes a las 10:00.', createdAt: '2026-08-05T17:05:00.000Z' },
+    { id: 'demo-msg-3', colegioId: 'x', autorId: 'demo-ing', autorNombre: 'Laura M.', autorRol: 'asesor', rama: 'ingles', texto: 'Para Bright Sparks falta confirmar el contacto de Inglés.', createdAt: '2026-08-05T17:18:00.000Z' },
+  ])
   const filtraRama = (s: Colegio['servicios'][number]) => rama === 'ingles' ? s.rama === 'ingles' : s.rama !== 'ingles'
+  const enviarDemo = async (texto: string, ramaMensaje: 'pedagogica' | 'ingles') => {
+    setMensajes((prev) => [...prev, {
+      id: `demo-msg-${Date.now()}`, colegioId: 'x', autorId: `demo-${modo}`,
+      autorNombre: modo === 'ejecutivo' ? 'Tú · Ejecutivo comercial' : (ramaMensaje === 'ingles' ? 'Tú · Asesor Inglés' : 'Tú · Asesor Pedagógico'),
+      autorRol: modo, rama: ramaMensaje, texto, createdAt: new Date().toISOString(),
+    }])
+    return { ok: true }
+  }
   return (
     <div style={{ maxWidth: 820, margin: '20px auto', padding: '0 12px', display: 'grid', gap: 10 }}>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '8px 0' }}>
@@ -43,6 +59,17 @@ export default function DevColegioCard() {
         onServ={(i, p) => setC((d) => ({ ...d, servicios: d.servicios.map((s, j) => j === i ? { ...s, ...p } : s) }))}
         onPatch={(p) => setC((d) => ({ ...d, ...p }))}
         onReportar={() => {}} rama={rama} servFilter={filtraRama} />
+      <section className="panel" style={{ margin: 0, padding: 14 }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+          <b style={{ marginRight: 'auto' }}>Demo de conversación</b>
+          <span style={{ color: 'var(--mut)', fontSize: 12 }}>Cambia de rol para probar ambos flujos</span>
+          <button className={modo === 'ejecutivo' ? 'primary' : 'sec'} onClick={() => setModo('ejecutivo')}>Ejecutivo</button>
+          <button className={modo === 'asesor' ? 'primary' : 'sec'} onClick={() => setModo('asesor')}>Asesor</button>
+        </div>
+        <MensajeThread mensajes={mensajes} rama={modo === 'asesor' ? rama : undefined}
+          ramasDisponibles={modo === 'asesor' ? [rama] : ['pedagogica', 'ingles']}
+          canSend onSend={enviarDemo} />
+      </section>
       {/* segunda tarjeta siempre colapsada, para comparar ambos estados */}
       <ColegioCard c={{ ...mock, id: 'y', nombre: 'Instituto México', campaign: 'CORE' }} hoy={hoyISO()} abierto={false}
         onToggle={() => {}} onServ={() => {}} onPatch={() => {}} />

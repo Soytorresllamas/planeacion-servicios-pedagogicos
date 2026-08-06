@@ -1,0 +1,1 @@
+import{j as s}from"./index-C97FJZpY.js";function m({title:t="Sin resultados",detail:e,action:i}){return s.jsxs("div",{className:"ui-empty",children:[s.jsx("div",{className:"ui-empty-title",children:t}),e&&s.jsx("div",{className:"ui-empty-detail",children:e}),i&&s.jsx("div",{className:"ui-empty-action",children:i})]})}export{m as E};
