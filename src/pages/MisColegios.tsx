@@ -13,6 +13,11 @@ import { useAcceso } from '../lib/accesoCtx'
 import logoSM from '../assets/logo-sm.svg'
 import { Icon } from '../ui/Icon'
 import { KpiCard } from '../ui/KpiCard'
+import { MensajeThread } from '../features/mensajes/MensajeThread'
+import { cargarMensajes, cargarVistas, crearMensaje, marcarMensajesVistos } from '../lib/mensajesStore'
+import { mensajesNoLeidos } from '../data/mensajes'
+import type { Mensaje } from '../data/mensajes'
+import type { RamaServicio } from '../data/planeacion'
 
 const fmtCorta = (iso: string) => iso.slice(5, 10).split('-').reverse().join('/')
 
@@ -37,6 +42,8 @@ export default function MisColegios() {
   const [previewNombre, setPreviewNombre] = useState<string | null>(null)
   const [busca, setBusca] = useState('')
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
+  const [mensajes, setMensajes] = useState<Mensaje[]>([])
+  const [vistas, setVistas] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let vivo = true
@@ -46,6 +53,18 @@ export default function MisColegios() {
       setStatus(res.source === 'remote' ? 'Actualizado' : 'Sin conexión · datos locales')
     })
     return () => { vivo = false }
+  }, [])
+
+  useEffect(() => {
+    let vivo = true
+    const cargar = () => Promise.all([cargarMensajes(), cargarVistas()]).then(([ms, vs]) => {
+      if (!vivo) return
+      setMensajes(ms)
+      setVistas(Object.fromEntries(vs.map((v) => [v.colegioId, v.ultimoVistoAt])))
+    })
+    void cargar()
+    const reloj = window.setInterval(() => { void cargar() }, 30000)
+    return () => { vivo = false; window.clearInterval(reloj) }
   }, [])
 
   const hoy = hoyISO()
@@ -103,7 +122,23 @@ export default function MisColegios() {
   }).filter((p) => p.abiertas > 0 || p.vencidos > 0 || p.done < p.c.servicios.length)
     .sort((a, b) => b.score - a.score)
     .slice(0, 4)
-  const toggle = (id: string) => setAbiertos((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  const mensajesDe = (colegioId: string) => mensajes.filter((m) => m.colegioId === colegioId)
+  const marcarVisto = (colegioId: string) => {
+    const visto = new Date().toISOString()
+    setVistas((v) => ({ ...v, [colegioId]: visto }))
+    void marcarMensajesVistos(colegioId)
+  }
+  const toggle = (id: string) => setAbiertos((p) => {
+    const n = new Set(p); const abrir = !n.has(id)
+    if (abrir) marcarVisto(id)
+    if (abrir) n.add(id); else n.delete(id)
+    return n
+  })
+  const enviarMensaje = async (colegio: Colegio, texto: string, rama: RamaServicio) => {
+    const r = await crearMensaje({ colegioId: colegio.id, autorNombre: sesion.nombre, autorRol: 'ejecutivo', rama, texto })
+    if (r.ok && r.mensaje) { setMensajes((m) => [...m, r.mensaje!]); marcarVisto(colegio.id) }
+    return r
+  }
 
   return (
     <div className="executive-page">
@@ -219,7 +254,7 @@ export default function MisColegios() {
                     <span aria-hidden style={{ width: 9, height: 9, borderRadius: 9, flex: '0 0 auto', background: c.campaign === 'SMART' ? SMART : CORE }} />
                     <b style={{ flex: 1, minWidth: 0, fontSize: 'var(--fs-title)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nombre}</b>
                     {sat && <span title={`Satisfacción: ${sat.label}`} style={{ fontSize: 15, flex: '0 0 auto' }}>{sat.emoji}</span>}
-                    {comentarios.length > 0 && <span title={`${comentarios.length} comentarios del asesor`} style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: 'var(--smart)', background: '#EAF1F9', borderRadius: 8, padding: '1px 7px', flex: '0 0 auto' }}>💬 {comentarios.length}</span>}
+                    {mensajesNoLeidos(mensajesDe(c.id), vistas[c.id]) > 0 && <span title="Mensajes no leídos" style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: 'var(--smart)', background: '#EAF1F9', borderRadius: 8, padding: '1px 7px', flex: '0 0 auto' }}>💬 {mensajesNoLeidos(mensajesDe(c.id), vistas[c.id])}</span>}
                     {vencidos > 0 && <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: '#8A6D1C', background: '#F6EBCB', borderRadius: 8, padding: '1px 7px', flex: '0 0 auto' }}>{vencidos} vencido{vencidos > 1 ? 's' : ''}</span>}
                   </button>
 
@@ -269,6 +304,13 @@ export default function MisColegios() {
                         </div>
                       ))}
                     </div>
+
+                    <MensajeThread
+                      mensajes={mensajesDe(c.id)}
+                      ramasDisponibles={c.asesorInglesId ? ['pedagogica', 'ingles'] : ['pedagogica']}
+                      canSend={sesion.rol === 'ejecutivo'}
+                      onSend={(texto, rama) => enviarMensaje(c, texto, rama)}
+                    />
 
                     {/* detalle de sesiones (lectura) */}
                     <div style={{ marginTop: 10 }}>

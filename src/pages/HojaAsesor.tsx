@@ -16,6 +16,10 @@ import { useAcceso } from '../lib/accesoCtx'
 import logoSM from '../assets/logo-sm.svg'
 import { Icon } from '../ui/Icon'
 import { AdvisorBottomNav } from '../features/asesor/AdvisorBottomNav'
+import { MensajeThread } from '../features/mensajes/MensajeThread'
+import { cargarMensajes, cargarVistas, crearMensaje, marcarMensajesVistos } from '../lib/mensajesStore'
+import { mensajesNoLeidos } from '../data/mensajes'
+import type { Mensaje } from '../data/mensajes'
 
 // ─── Portal del asesor (V3, móvil-first) ──────────────────────────────────────
 // El acceso viene de la sesión global (login por usuario): un asesor entra
@@ -47,6 +51,8 @@ export default function HojaAsesor() {
   const [alTipo, setAlTipo] = useState<ProblemaKey>('materiales')
   const [alDesc, setAlDesc] = useState('')
   const [alSent, setAlSent] = useState(false)
+  const [mensajes, setMensajes] = useState<Mensaje[]>([])
+  const [vistas, setVistas] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let alive = true
@@ -57,6 +63,18 @@ export default function HojaAsesor() {
       setReady(true)
     })
     return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    let vivo = true
+    const cargar = () => Promise.all([cargarMensajes(), cargarVistas()]).then(([ms, vs]) => {
+      if (!vivo) return
+      setMensajes(ms)
+      setVistas(Object.fromEntries(vs.map((v) => [v.colegioId, v.ultimoVistoAt])))
+    })
+    void cargar()
+    const reloj = window.setInterval(() => { void cargar() }, 30000)
+    return () => { vivo = false; window.clearInterval(reloj) }
   }, [])
 
   // guardado con debounce + flush al desmontar (ver lib/persistencia)
@@ -154,9 +172,21 @@ export default function HojaAsesor() {
   const toggleCard = (id: string) => setExpandidos((p) => {
     const base = p ?? new Set(visibles.length ? [visibles[0].id] : [])
     const n = new Set(base)
-    if (n.has(id)) n.delete(id); else n.add(id)
+    if (n.has(id)) n.delete(id)
+    else { n.add(id); marcarVisto(id) }
     return n
   })
+  const mensajesDe = (colegioId: string) => mensajes.filter((m) => m.colegioId === colegioId)
+  const marcarVisto = (colegioId: string) => {
+    const visto = new Date().toISOString()
+    setVistas((v) => ({ ...v, [colegioId]: visto }))
+    void marcarMensajesVistos(colegioId)
+  }
+  const enviarMensaje = async (colegio: Colegio, texto: string) => {
+    const r = await crearMensaje({ colegioId: colegio.id, autorNombre: asesor.nombre, autorRol: 'asesor', rama, texto })
+    if (r.ok && r.mensaje) { setMensajes((m) => [...m, r.mensaje!]); marcarVisto(colegio.id) }
+    return r
+  }
   const setServ = (colegioId: string, idx: number, patch: Partial<Servicio>) =>
     setData((d) => ({ ...d, colegios: setServicio(d.colegios, colegioId, idx, patch) }))
   const patchCol = (id: string, patch: Partial<Colegio>) =>
@@ -327,12 +357,14 @@ export default function HojaAsesor() {
             <div className="asesor-card-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
               {visibles.map((c, idxV) => (
                 <div key={c.id} className="card-in" style={{ ['--i' as string]: Math.min(idxV, 8) }}>
+                  {mensajesNoLeidos(mensajesDe(c.id), vistas[c.id]) > 0 && <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}><span style={{ fontSize: 'var(--fs-caption)', fontWeight: 700, color: 'var(--smart)', background: '#EAF1F9', borderRadius: 8, padding: '1px 7px' }}>💬 {mensajesNoLeidos(mensajesDe(c.id), vistas[c.id])} mensaje{mensajesNoLeidos(mensajesDe(c.id), vistas[c.id]) > 1 ? 's' : ''} nuevo{mensajesNoLeidos(mensajesDe(c.id), vistas[c.id]) > 1 ? 's' : ''}</span></div>}
                   <ColegioCard c={c} hoy={hoy} abierto={abiertoCard(c.id, idxV)}
                     onToggle={() => toggleCard(c.id)}
                     onServ={(i, p) => setServ(c.id, i, p)}
                     onPatch={(p) => patchCol(c.id, p)}
                     rama={rama} servFilter={filtraRama}
                     onReportar={() => abrirAlerta(c.id)} />
+                  {abiertoCard(c.id, idxV) && <MensajeThread mensajes={mensajesDe(c.id)} rama={rama} canSend={sesion.rol === 'asesor'} onSend={(texto) => enviarMensaje(c, texto)} />}
                 </div>
               ))}
             </div>
